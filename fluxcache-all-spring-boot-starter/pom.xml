@@ -17,4 +17,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>io.github.weihubeats</groupId>
+            <artifactId>fluxcache-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.weihubeats</groupId>
+            <artifactId>fluxcache-admin</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>
