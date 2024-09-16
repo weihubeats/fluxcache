@@ -1,6 +1,7 @@
 package com.fluxcache.core.model;
 
 import com.fluxcache.core.enums.FluxCacheLevel;
+import lombok.Data;
 import org.springframework.util.Assert;
 
 /**
@@ -8,6 +9,7 @@ import org.springframework.util.Assert;
  * @date : 2024/9/11 22:29
  * @description:
  */
+@Data
 public class FluxCacheOperation {
 
     private static final String NO_METHOD = "no_method";
