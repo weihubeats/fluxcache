@@ -1,12 +1,14 @@
 package com.fluxcache.core.model;
 
 import java.io.Serializable;
+import lombok.Data;
 
 /**
  * @author : wh
  * @date : 2024/9/28 13:57
  * @description:
  */
+@Data
 public abstract class AbstractLocalCacheDTO implements Serializable {
 
     /**
