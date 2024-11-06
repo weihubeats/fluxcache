@@ -18,6 +18,11 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>io.github.weihubeats</groupId>
+            <artifactId>fluxcache-core</artifactId>
+        </dependency>
         
         <dependency>
             <groupId>io.github.weihubeats</groupId>
