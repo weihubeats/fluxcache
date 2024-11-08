@@ -1,6 +1,7 @@
 # fluxcache
 多级缓存框架(multilevel cache framework)
 
+
 # 特性
 
 - 自定义一级缓存
@@ -15,3 +16,14 @@
 - 纯注解使用，无需关注底层实现
 - `dashboard`支持缓存相关监控统计(命中率等)
 - 支持`redisson`底层存储自由选择`RMapCache`还是`Bucket`
+
+# dashboard
+
+![home-page.png](./docs/images/home-page.png)
+
+![hit_rate.png](./docs/images/hit_rate.png)
+
+![cache-count.png](./docs/images/cache-count.png)
+
+![max-loading-time.png](./docs/images/max-loading-time.png)
+
