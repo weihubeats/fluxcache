@@ -1,4 +1,4 @@
-package com.fluxcache.admin.vo;
+package com.fluxcache.core.monitor;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
@@ -6,11 +6,11 @@ import lombok.Data;
 
 /**
  * @author : wh
- * @date : 2024/9/1 18:36
+ * @date : 2024/11/10 15:42
  * @description:
  */
 @Data
-public class FluxCacheStaticsVO {
+public class FluxCacheInfo {
 
     /**
      * 命中次数
@@ -28,7 +28,7 @@ public class FluxCacheStaticsVO {
     private LongAdder evictCount;
 
     /**
-     * 缓存的put次数
+     * 更新次数
      */
     private LongAdder putCount;
 
@@ -43,17 +43,21 @@ public class FluxCacheStaticsVO {
     private AtomicLong maxLoadTime;
 
     /**
-     * 命中率
-     */
-    private Double hitRate;
-
-    /**
      * 开始时间
      */
-    private Long startTime;
+    private AtomicLong startTime;
 
     /**
      * 结束时间
      */
-    private Long endTime;
+    private AtomicLong endTime;
+
+    public FluxCacheInfo() {
+        this.hit = new LongAdder();
+        this.fail = new LongAdder();
+        this.evictCount = new LongAdder();
+        this.putCount = new LongAdder();
+        this.requestCount = new LongAdder();
+        this.maxLoadTime = new AtomicLong(Long.MIN_VALUE);
+    }
 }
