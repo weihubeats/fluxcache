@@ -1,5 +1,6 @@
 package com.fluxcache.core.caffeine;
 
+import com.fluxcache.core.caffeine.sync.CacheSyncStrategy;
 import com.fluxcache.core.enums.CacheOrder;
 import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.model.DeleteCacheDTO;

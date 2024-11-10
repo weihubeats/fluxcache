@@ -1,4 +1,4 @@
-package com.fluxcache.core.caffeine;
+package com.fluxcache.core.caffeine.sync;
 
 import com.fluxcache.core.model.DeleteCacheDTO;
 import com.fluxcache.core.model.PutCacheDTO;

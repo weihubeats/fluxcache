@@ -11,7 +11,7 @@ import org.springframework.lang.Nullable;
  * @date : 2024/9/19 21:49
  * @description:
  */
-public interface FluxCache<K, V> {
+public interface FluxCache<K, V> extends LocalCache<K, V> {
 
     V get(K key, Callable<V> valueLoader);
 
