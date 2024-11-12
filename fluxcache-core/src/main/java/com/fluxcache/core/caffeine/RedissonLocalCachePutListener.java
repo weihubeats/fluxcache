@@ -1,4 +1,4 @@
-package com.fluxcache.core.caffeine.sync;
+package com.fluxcache.core.caffeine;
 
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;

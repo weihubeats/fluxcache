@@ -1,8 +1,7 @@
-package com.fluxcache.core.caffeine.sync;
+package com.fluxcache.core.caffeine;
 
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;
-import com.fluxcache.core.caffeine.FluxCaffeineCache;
 import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.impl.FluxRedissonCaffeineCache;
 import com.fluxcache.core.model.DeleteCacheDTO;
