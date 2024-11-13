@@ -1,8 +1,8 @@
 package com.fluxcache.core.model;
 
 import com.fluxcache.core.annotation.FirstCacheable;
-import com.fluxcache.core.annotation.FluxCacheType;
 import com.fluxcache.core.annotation.SecondaryCacheable;
+import com.fluxcache.core.enums.FluxCacheType;
 import java.util.concurrent.TimeUnit;
 import lombok.Data;
 

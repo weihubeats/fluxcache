@@ -1,5 +1,6 @@
 package com.fluxcache.core.annotation;
 
+import com.fluxcache.core.enums.FluxCacheType;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;

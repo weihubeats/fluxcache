@@ -1,12 +1,14 @@
 package com.fluxcache.core.model;
 
 import java.util.concurrent.TimeUnit;
+import lombok.Getter;
 
 /**
  * @author : wh
  * @date : 2024/9/16 21:29
  * @description:
  */
+@Getter
 public class FluxCacheCacheable extends FluxCacheOperation{
 
     private final Long ttl;
