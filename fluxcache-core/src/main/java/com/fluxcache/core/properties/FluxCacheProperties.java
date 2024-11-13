@@ -1,6 +1,7 @@
 package com.fluxcache.core.properties;
 
 import com.fluxcache.core.enums.FluxCacheLevel;
+import com.fluxcache.core.enums.FluxCacheType;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import lombok.Data;
