@@ -66,7 +66,7 @@ public class FluxCacheFactory {
                 return new FluxCaffeineCache<>(ca.getCacheName(), caffeineCache, cacheSyncStrategy, cacheProperties, cacheMonitor);
             }
         },
-        REDIS(FluxCacheType.REDIS) {
+        REDIS(FluxCacheType.REDIS_R_MAP) {
             @Override
             protected FluxAbstractValueAdaptingCache<?, ?> createFluxCache(FluxCacheCacheable ca,
                 RedissonClient redissonClient,

@@ -51,7 +51,7 @@ public class MyFluxCacheDataRegistered implements FluxCacheDataRegistered {
             .build();
 
         FluxCacheCacheableConfig build2 = new FluxCacheCacheableConfig.Builder()
-            .setCacheType(FluxCacheType.REDIS)
+            .setCacheType(FluxCacheType.REDIS_R_MAP)
             .setMaxSize(100)
             .setTtl(10L)
             .setInitSize(10)
@@ -67,7 +67,7 @@ public class MyFluxCacheDataRegistered implements FluxCacheDataRegistered {
             .build();
 
         FluxCacheCacheableConfig RedisFirst = new FluxCacheCacheableConfig.Builder()
-            .setCacheType(FluxCacheType.REDIS)
+            .setCacheType(FluxCacheType.REDIS_R_MAP)
             .setMaxSize(100)
             .setTtl(10L)
             .setInitSize(10)

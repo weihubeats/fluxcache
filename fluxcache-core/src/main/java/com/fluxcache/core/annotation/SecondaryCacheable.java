@@ -28,5 +28,5 @@ public @interface SecondaryCacheable {
 
     TimeUnit unit() default TimeUnit.MINUTES;
 
-    FluxCacheType fluxCacheType() default FluxCacheType.REDIS;
+    FluxCacheType fluxCacheType() default FluxCacheType.REDIS_R_MAP;
 }

@@ -17,6 +17,25 @@
 - `dashboard`支持缓存相关监控统计(命中率等)
 - 支持`redisson`底层存储自由选择`RMapCache`还是`Bucket`
 
+## 使用
+
+可以参考[fluxcache-example](fluxcache-example)模块。这里简单介绍一下
+
+目前支持手动和注解方式添加缓存
+
+### 注解添加缓存
+
+- 一级缓存使用`CAFFEINE`
+```java
+    @GetMapping("/test")
+    @FluxCacheable(cacheName = "firstCacheByCaffeine", key = "#name",
+        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
+    public List<StudentVO> firstCacheByCaffeine(String name) {
+        return mockSelectSql();
+    }
+```
+- 一级缓存使用`CAFFEINE`
+
 # dashboard
 
 ![home-page.png](./docs/images/home-page.png)

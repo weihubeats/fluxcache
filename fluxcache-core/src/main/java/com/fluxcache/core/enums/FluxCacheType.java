@@ -8,7 +8,7 @@ package com.fluxcache.core.enums;
 public enum FluxCacheType {
 
     CAFFEINE,
-    REDIS,
+    REDIS_R_MAP,
     REDIS_BUCKET,
     ;
 }

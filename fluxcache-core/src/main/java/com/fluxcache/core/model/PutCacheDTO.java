@@ -28,4 +28,11 @@ public class PutCacheDTO extends AbstractLocalCacheDTO {
         this.key = key;
         this.cacheValue = cacheValue;
     }
+    
+    public PutCacheDTO() {
+    }
+    
+    
+    
+    
 }
