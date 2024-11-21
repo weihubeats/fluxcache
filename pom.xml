@@ -21,10 +21,7 @@
     <name>flux cache</name>
     <description>Multi-level caching framework</description>
     <url>https://github.com/weihubeats/fluxcache</url>
-
-
-
-
+    
 
     <properties>
         <revision>0.0.1</revision>
@@ -43,8 +40,6 @@
         <spring-boot.version>2.7.0</spring-boot.version>
         <guava.version>31.1-jre</guava.version>
         <redisson.version>3.35.0</redisson.version>
-
-
     </properties>
 
 

@@ -8,12 +8,14 @@ import com.fluxcache.core.model.FluxMultilevelCacheCacheable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.springframework.stereotype.Component;
 
 /**
  * @author : wh
  * @date : 2024/11/17 17:37
  * @description:
  */
+@Component
 public class MyFluxCacheDataRegistered implements FluxCacheDataRegistered {
 
     public static final String PRODUCT_MANUAL_CACHE = "productManualCache";
