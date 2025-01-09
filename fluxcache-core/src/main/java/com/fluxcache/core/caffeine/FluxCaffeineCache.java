@@ -9,6 +9,7 @@ import com.fluxcache.core.monitor.FluxCacheMonitor;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import com.fluxcache.core.utils.JsonUtil;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -219,7 +220,7 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
      * 分布式删除缓存
      */
     protected void postEvict(K key) {
-        DeleteCacheDTO deleteCacheDTO = new DeleteCacheDTO(this.name, List.of(key));
+        DeleteCacheDTO deleteCacheDTO = new DeleteCacheDTO(this.name, Lists.newArrayList(key));
         deleteCacheDTO.setTopicName(deleteCacheDTO.topicName(fluxCacheProperties.namespace()));
         cacheSyncStrategy.postEvict(deleteCacheDTO);
     }
