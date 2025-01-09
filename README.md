@@ -29,13 +29,48 @@
         <dependency>
             <groupId>io.github.weihubeats</groupId>
             <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-            <version>0.0.1</version>
+            <version>0.0.2</version>
         </dependency>
 ```
 
 ### 2. 启动类添加注解`@EnableFluxCaching`
 
-### 3. 使用
+### 3. 配置redission
+
+```java
+@Configuration
+public class RedissonConfig {
+
+    @Value("${redis.host}")
+    private String redisLoginHost;
+    @Value("${redis.port}")
+    private Integer redisLoginPort;
+    @Value("${redis.password}")
+    private String redisLoginPassword;
+
+    @Bean
+    public RedissonClient redissonClient() {
+        return createRedis(redisLoginHost, redisLoginPort, redisLoginPassword);
+    }
+
+    private RedissonClient createRedis(String redisHost, Integer redisPort, String redisPassword) {
+        Config config = new Config();
+        SingleServerConfig singleServerConfig = config.useSingleServer();
+        singleServerConfig.setAddress("redis://" + redisHost + ":" + redisPort + "");
+        if (Objects.nonNull(redisPassword)) {
+            singleServerConfig.setPassword(redisPassword);
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        config.setCodec(new JsonJacksonCodec(objectMapper));
+        return Redisson.create(config);
+    }
+
+}
+
+```
+
+### 4. 使用
 
 目前添缓存的方式有两种
 
