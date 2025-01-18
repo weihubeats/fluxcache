@@ -31,15 +31,16 @@
         <caffeine.version>3.1.8</caffeine.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <spring-boot.version>2.7.0</spring-boot.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <spring-boot.version>3.4.1</spring-boot.version>
         <lombok.version>1.18.22</lombok.version>
         <junit.version>4.13.1</junit.version>
         <org.redisson.version>3.14.1</org.redisson.version>
         <spring-boot.version>2.7.0</spring-boot.version>
         <guava.version>31.1-jre</guava.version>
         <redisson.version>3.35.0</redisson.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
 
