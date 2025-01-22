@@ -12,12 +12,10 @@
     <artifactId>fluxcache-example</artifactId>
 
     <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version>${revision}</version>
+        <maven.deploy.skip>true</maven.deploy.skip>
     </properties>
-    
+
+
     
     <dependencies>
         
@@ -31,6 +29,12 @@
             <groupId>io.github.weihubeats</groupId>
             <artifactId>fluxcache-all-spring-boot-starter</artifactId>
             <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
         </dependency>
         
     </dependencies>
