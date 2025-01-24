@@ -37,4 +37,4 @@ jobs:
 
       # 运行集成测试
       - name: Run Integration Tests
-        run: ./mvn verify -B -Dmaven.test.skip=false -Dgpg.skip=true
+        run: mvn verify -B -Dmaven.test.skip=false -Dgpg.skip=true
