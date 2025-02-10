@@ -208,6 +208,31 @@ public class MyFluxCacheDataRegistered implements FluxCacheDataRegistered {
 }
 ```
 
+## 内置缓存管理接口
+
+默认同意请求前缀为`/cache/manager/v1`，详细接口返回情况可以查看[FluxCacheController.java](fluxcache-admin%2Fsrc%2Fmain%2Fjava%2Fcom%2Ffluxcache%2Fadmin%2Fcontroller%2FFluxCacheController.java)
+
+如果想要自定义可以通过配置`flux.cache.prefix`进行设置
+
+### 获取所有缓存使用统计请求
+
+`/getAllStatics`
+
+### 查看指定缓存数据
+
+`/getValue`
+
+### 查看所有缓存
+
+`/all/caches`
+
+### 清理指定缓存
+
+`/evict`
+
+### 清理所有缓存
+
+`/clear`
 
 # dashboard
 
