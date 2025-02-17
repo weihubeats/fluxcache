@@ -1,14 +1,17 @@
 package com.fluxcache.core.model;
 
 import java.util.List;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * @author : wh
  * @date : 2024/10/20 20:46
  * @description:
  */
-@Data
+@Getter
+@NoArgsConstructor
+
 public class DeleteCacheDTO extends AbstractLocalCacheDTO{
 
     public static final  String CACHE_EVICT_TOPIC_PREFIX = "CACHE_DELETE_TOPIC";

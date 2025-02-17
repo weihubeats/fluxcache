@@ -4,6 +4,7 @@ import com.fluxcache.core.DefaultFluxCacheManager;
 import com.fluxcache.core.monitor.FluxCacheInfo;
 import com.fluxcache.core.monitor.FluxCacheStatics;
 import com.fluxcache.core.properties.FluxCacheProperties;
+import com.fluxcache.example.FluxCacheApplication;
 import com.fluxcache.example.vo.StudentVO;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,10 +13,14 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -26,10 +31,21 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * @date : 2025/1/21 18:22
  * @description:
  */
-@SpringBootTest
-@RunWith(SpringRunner.class)
+@SpringBootTest(classes = FluxCacheApplication.class)
 @Slf4j
-class TestControllerTest {
+@Testcontainers
+public class TestControllerTest {
+
+    @Container
+    public static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:6.2.6"))
+        .withExposedPorts(6379);
+
+    @DynamicPropertySource
+    static void redisProperties(DynamicPropertyRegistry registry) {
+        registry.add("redis.host", redis::getHost);
+        registry.add("redis.port", () -> redis.getMappedPort(6379).toString());
+        registry.add("redis.password", () -> "");
+    }
 
     private final static Long SLEEP_TIME = 3L;
 
@@ -41,7 +57,6 @@ class TestControllerTest {
 
     @Autowired
     private DefaultFluxCacheManager cacheManager;
-
 
     @Test
     public void testFirstCacheByCaffeine() {
@@ -63,7 +78,6 @@ class TestControllerTest {
         List<StudentVO> vos1 = testController.mockSelectSqlToNullByFirstCache("orderNull");
     }
 
-
     @Test
     public void firstCacheByCaffeineAndOptional() {
         String key = "orderOptional";
@@ -83,7 +97,6 @@ class TestControllerTest {
         assertEquals(vosOptionals.get(), vosOptional1s.get());
 
     }
-
 
     @Test
     public void testFirstCacheByRedis() {

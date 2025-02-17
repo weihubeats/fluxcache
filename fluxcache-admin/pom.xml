@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>fluxcache-admin</artifactId>
+
     
 
     <dependencies>

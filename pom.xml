@@ -7,8 +7,8 @@
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache</artifactId>
     <packaging>pom</packaging>
-    
-    
+
+
     <modules>
         <module>fluxcache-core</module>
         <module>fluxcache-all-spring-boot-starter</module>
@@ -21,7 +21,7 @@
     <name>flux cache</name>
     <description>Multi-level caching framework</description>
     <url>https://github.com/weihubeats/fluxcache</url>
-    
+
 
     <properties>
         <revision>3.0.0</revision>
@@ -139,7 +139,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.18.1</version>
                 <configuration>
-                    <skipTests>true</skipTests>
+                    <skipTests>false</skipTests>
                 </configuration>
             </plugin>
             <plugin>
@@ -191,7 +191,7 @@
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
-                        <phase>verify</phase>
+                        <phase>install</phase>
                         <goals>
                             <goal>sign</goal>
                         </goals>
@@ -224,6 +224,9 @@
                     </execution>
                 </executions>
             </plugin>
+
+
+            
         </plugins>
     </build>
 

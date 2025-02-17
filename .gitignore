@@ -81,3 +81,6 @@ atlassian-ide-plugin.xml
 */logs
 /cache
 */cache
+
+# Maven ignore
+.flattened-pom.xml

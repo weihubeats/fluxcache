@@ -2,15 +2,15 @@ package com.fluxcache.example.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import java.util.Objects;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.codec.JsonJacksonCodec;
+import org.redisson.config.Config;
 import org.redisson.config.SingleServerConfig;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.beans.factory.annotation.Value;
-import org.redisson.config.Config;
+import org.springframework.util.ObjectUtils;
 
 /**
  * @author : wh
@@ -36,7 +36,7 @@ public class RedissonConfig {
         Config config = new Config();
         SingleServerConfig singleServerConfig = config.useSingleServer();
         singleServerConfig.setAddress("redis://" + redisHost + ":" + redisPort + "");
-        if (Objects.nonNull(redisPassword)) {
+        if (!ObjectUtils.isEmpty(redisPassword)) {
             singleServerConfig.setPassword(redisPassword);
         }
         ObjectMapper objectMapper = new ObjectMapper();
