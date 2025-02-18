@@ -33,6 +33,18 @@
         </dependency>
 ```
 
+####  spring boot3以上版本请使用如下版本
+
+```xml
+        <dependency>
+            <groupId>io.github.weihubeats</groupId>
+            <artifactId>fluxcache-all-spring-boot-starter</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+```
+
+>相关源码在`spring-boot-3.x`分支
+
 ### 2. 启动类添加注解`@EnableFluxCaching`
 
 ### 3. 配置redission
