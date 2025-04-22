@@ -15,16 +15,20 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
 
     private final FluxCacheCacheableConfig secondaryCacheConfig;
 
+    private final boolean allowCacheNull;
+
     public FluxMultilevelCacheCacheable(Builder builder) {
         super(builder);
         this.firstCacheConfig = builder.firstCacheConfig;
         this.secondaryCacheConfig = builder.secondaryCacheConfig;
+        this.allowCacheNull = builder.allowNullValues;
     }
 
     public FluxMultilevelCacheCacheable(CacheConfigBuilder builder) {
         super(builder.cacheName, builder.fluxCacheLevel);
         this.firstCacheConfig = builder.firstCacheConfig;
         this.secondaryCacheConfig = builder.secondaryCacheConfig;
+        this.allowCacheNull = builder.allowNullValues;
     }
 
     public FluxCacheOperation convertsFluxCacheCacheable(FluxCacheCacheableConfig cacheableConfig) {
@@ -34,6 +38,7 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
             .setTtl(cacheableConfig.getTtl())
             .setInitSize(cacheableConfig.getInitSize())
             .setMaxSize(cacheableConfig.getMaxSize())
+            .setAllowCacheNull(this.isAllowCacheNull())
             .setCacheName(this.getCacheName())
             .setKey(this.getKey())
             .setMethodName(this.getMethodName())
@@ -46,6 +51,8 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
 
         private FluxCacheCacheableConfig secondaryCacheConfig;
 
+        private boolean allowNullValues;
+
         public Builder setFirstCacheConfig(FluxCacheCacheableConfig firstCacheConfig) {
             this.firstCacheConfig = firstCacheConfig;
             return this;
@@ -53,6 +60,11 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
 
         public Builder setSecondaryCacheable(FluxCacheCacheableConfig secondaryCacheConfig) {
             this.secondaryCacheConfig = secondaryCacheConfig;
+            return this;
+        }
+
+        public Builder setAllowNullValues(boolean allowNullValues) {
+            this.allowNullValues = allowNullValues;
             return this;
         }
 
@@ -75,6 +87,8 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
 
         private FluxCacheCacheableConfig secondaryCacheConfig;
 
+        private boolean allowNullValues;
+
         public CacheConfigBuilder setCacheName(String cacheName) {
             this.cacheName = cacheName;
             return this;
@@ -92,6 +106,11 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
 
         public CacheConfigBuilder setSecondaryCacheConfig(FluxCacheCacheableConfig secondaryCacheConfig) {
             this.secondaryCacheConfig = secondaryCacheConfig;
+            return this;
+        }
+
+        public CacheConfigBuilder setAllowNullValues(boolean allowNullValues) {
+            this.allowNullValues = allowNullValues;
             return this;
         }
 

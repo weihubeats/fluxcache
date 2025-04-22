@@ -29,6 +29,8 @@ public @interface FluxCacheable {
 
     String key() default "";
 
+    boolean allowCacheNull() default true;
+
     FirstCacheable firstCacheable() default @FirstCacheable();
 
 

@@ -182,6 +182,19 @@ public class TestController {
         return mockSelectSqlToNull();
     }
 
+    /**
+     * 不缓存null
+     * @param name
+     * @return
+     */
+    @GetMapping("/test-no-null-firstCache")
+    @FluxCacheable(cacheName = "testNoNullFirstCache", key = "#name",
+        fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20), allowCacheNull = false)
+    public List<StudentVO> mockSelectSqlToNoNullByFirstCache(String name) {
+        return mockSelectSqlToNull();
+    }
+
     @GetMapping("/test-null-secondaryCache")
     @FluxCacheable(cacheName = "testNullSecondaryCache", key = "#name",
         fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,

@@ -21,7 +21,10 @@ import org.springframework.lang.Nullable;
  */
 public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<K, V> {
 
-    private final boolean allowNullValues;
+    /**
+     * 是否缓存null
+     */
+    private final boolean allowCacheNull;
 
     private final FluxCacheMonitor cacheMonitor;
 
@@ -32,22 +35,16 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
     /**
      * Create an {@code AbstractValueAdaptingCache} with the given setting.
      *
-     * @param allowNullValues whether to allow for {@code null} values
+     * @param allowCacheNull 
      */
-    protected FluxAbstractValueAdaptingCache(boolean allowNullValues, FluxCacheMonitor cacheMonitor, String name,
+    protected FluxAbstractValueAdaptingCache(boolean allowCacheNull, FluxCacheMonitor cacheMonitor, String name,
         FluxCacheProperties cacheProperties) {
-        this.allowNullValues = allowNullValues;
+        this.allowCacheNull = allowCacheNull;
         this.cacheMonitor = cacheMonitor;
         this.name = name;
         this.cacheProperties = cacheProperties;
     }
-
-    /**
-     * Return whether {@code null} values are allowed in this cache.
-     */
-    public final boolean isAllowNullValues() {
-        return this.allowNullValues;
-    }
+    
 
     @Override
     @Nullable
@@ -82,6 +79,9 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
 
     @Override
     public void put(K key, @Nullable Object value) {
+        if (Objects.isNull(value) && !allowCacheNull) {
+            return;
+        }
         long startTime = System.currentTimeMillis();
         putValue(key, toStoreValue(value));
         publishCacheMonitorEvent(MonitorEventEnum.CACHE_PUT, 1L, startTime);
@@ -194,7 +194,7 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
      */
     @Nullable
     protected V fromStoreValue(@Nullable V storeValue) {
-        if (this.allowNullValues && storeValue instanceof FluxNullValue) {
+        if (this.allowCacheNull && storeValue instanceof FluxNullValue) {
             return null;
         }
         return storeValue;
@@ -209,13 +209,17 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
      */
     protected Object toStoreValue(@Nullable Object userValue) {
         if (userValue == null) {
-            if (this.allowNullValues) {
+            if (this.allowCacheNull) {
                 return FluxNullValue.INSTANCE;
             }
             throw new IllegalArgumentException(
                 "Cache '" + getName() + "' is configured to not allow null values but null was provided");
         }
         return userValue;
+    }
+
+    public boolean allowCacheNull() {
+        return this.allowCacheNull;
     }
 
     /**
