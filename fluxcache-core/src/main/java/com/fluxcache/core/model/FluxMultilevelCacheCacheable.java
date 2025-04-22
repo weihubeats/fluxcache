@@ -38,7 +38,7 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
             .setTtl(cacheableConfig.getTtl())
             .setInitSize(cacheableConfig.getInitSize())
             .setMaxSize(cacheableConfig.getMaxSize())
-            .setAllowCacheNull(this.isAllowCacheNull())
+            .setAllowCacheNull(this.allowCacheNull)
             .setCacheName(this.getCacheName())
             .setKey(this.getKey())
             .setMethodName(this.getMethodName())
@@ -63,8 +63,8 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
             return this;
         }
 
-        public Builder setAllowNullValues(boolean allowNullValues) {
-            this.allowNullValues = allowNullValues;
+        public Builder setAllowCacheNull(boolean allowCacheNull) {
+            this.allowNullValues = allowCacheNull;
             return this;
         }
 
