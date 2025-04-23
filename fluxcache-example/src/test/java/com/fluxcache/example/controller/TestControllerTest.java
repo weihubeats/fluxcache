@@ -79,6 +79,12 @@ public class TestControllerTest {
     }
 
     @Test
+    public void testFirstCacheByCaffeineByNoNull() {
+        List<StudentVO> vos = testController.mockSelectSqlToNoNullByFirstCache("orderNull");
+        List<StudentVO> vos1 = testController.mockSelectSqlToNoNullByFirstCache("orderNull");
+    }
+
+    @Test
     public void firstCacheByCaffeineAndOptional() {
         String key = "orderOptional";
         Optional<List<StudentVO>> vosOptionals = testController.firstCacheByCaffeineAndOptional(key);

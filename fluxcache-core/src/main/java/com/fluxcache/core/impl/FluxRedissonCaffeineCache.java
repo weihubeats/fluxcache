@@ -26,12 +26,12 @@ public class FluxRedissonCaffeineCache<K, V> extends FluxAbstractValueAdaptingCa
     /**
      * Create an {@code AbstractValueAdaptingCache} with the given setting.
      *
-     * @param allowNullValues whether to allow for {@code null} values
+     * @param allowCacheNull 
      */
-    protected FluxRedissonCaffeineCache(boolean allowNullValues, String name,
+    protected FluxRedissonCaffeineCache(boolean allowCacheNull, String name,
         FluxAbstractValueAdaptingCache<K, V> fluxFirstCache, FluxAbstractValueAdaptingCache<K, V> fluxSecondaryCache,
         FluxCacheMonitor cacheMonitor, FluxCacheProperties cacheProperties) {
-        super(allowNullValues, cacheMonitor, name, cacheProperties);
+        super(allowCacheNull, cacheMonitor, name, cacheProperties);
         this.fluxFirstCache = fluxFirstCache;
         this.fluxSecondaryCache = fluxSecondaryCache;
     }

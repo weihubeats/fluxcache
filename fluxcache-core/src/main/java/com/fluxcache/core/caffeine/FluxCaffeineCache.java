@@ -47,14 +47,14 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
     /**
      * @param name            the name of the cache
      * @param cache           the backing Caffeine Cache instance
-     * @param allowNullValues whether to accept and convert {@code null}
-     *                        values for this cache
+     * @param allowCacheNull 
+     *                       
      */
     public FluxCaffeineCache(String name, com.github.benmanes.caffeine.cache.Cache cache,
-        boolean allowNullValues, CacheSyncStrategy cacheSyncStrategy, FluxCacheProperties cacheProperties,
+        boolean allowCacheNull, CacheSyncStrategy cacheSyncStrategy, FluxCacheProperties cacheProperties,
         FluxCacheMonitor cacheMonitor) {
 
-        super(allowNullValues, cacheMonitor, name, cacheProperties);
+        super(allowCacheNull, cacheMonitor, name, cacheProperties);
         Assert.notNull(name, "Name must not be null");
         Assert.notNull(cache, "Cache must not be null");
         this.cache = cache;

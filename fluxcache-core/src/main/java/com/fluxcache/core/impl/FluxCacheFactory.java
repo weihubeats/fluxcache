@@ -43,7 +43,7 @@ public class FluxCacheFactory {
             FluxAbstractValueAdaptingCache<?, ?> FluxFirstCache = CacheTypeStrategy.getStrategy(secondaryCacheConfig.getCacheType()).createFluxCache(cacheCacheable, redissonClient, cacheSyncStrategy, cacheProperties, cacheMonitor);
             FluxAbstractValueAdaptingCache<?, ?> FluxSecondaryCache = CacheTypeStrategy.getStrategy(config.getCacheType()).createFluxCache(cacheCacheable, redissonClient, cacheSyncStrategy, cacheProperties, cacheMonitor);
 
-            FluxRedissonCaffeineCache<?, ?> cache = new FluxRedissonCaffeineCache(true, ca.getCacheName(), FluxFirstCache, FluxSecondaryCache, cacheMonitor, cacheProperties);
+            FluxRedissonCaffeineCache<?, ?> cache = new FluxRedissonCaffeineCache(ca.isAllowCacheNull(), ca.getCacheName(), FluxFirstCache, FluxSecondaryCache, cacheMonitor, cacheProperties);
             return cache;
         }
         return null;
@@ -63,7 +63,7 @@ public class FluxCacheFactory {
                     .initialCapacity(ca.getInitSize())
                     .maximumSize(ca.getMaxSize())
                     .build();
-                return new FluxCaffeineCache<>(ca.getCacheName(), caffeineCache, cacheSyncStrategy, cacheProperties, cacheMonitor);
+                return new FluxCaffeineCache<>(ca.getCacheName(), caffeineCache, ca.isAllowCacheNull(),  cacheSyncStrategy, cacheProperties, cacheMonitor);
             }
         },
         REDIS(FluxCacheType.REDIS_R_MAP) {
@@ -72,7 +72,7 @@ public class FluxCacheFactory {
                 RedissonClient redissonClient,
                 CacheSyncStrategy cacheSyncStrategy, FluxCacheProperties cacheProperties,
                 FluxCacheMonitor cacheMonitor) {
-                return new FluxRedissonCacheByRMapCache<>(true, redissonClient, ca, cacheMonitor, cacheProperties);
+                return new FluxRedissonCacheByRMapCache<>(ca.isAllowCacheNull(), redissonClient, ca, cacheMonitor, cacheProperties);
             }
         },
         REDIS_BUCKET(FluxCacheType.REDIS_BUCKET) {
@@ -81,7 +81,7 @@ public class FluxCacheFactory {
                 RedissonClient redissonClient,
                 CacheSyncStrategy cacheSyncStrategy, FluxCacheProperties cacheProperties,
                 FluxCacheMonitor cacheMonitor) {
-                return new FluxRedissonCacheByBucket<>(true, redissonClient, ca, cacheMonitor, cacheProperties);
+                return new FluxRedissonCacheByBucket<>(ca.isAllowCacheNull(), redissonClient, ca, cacheMonitor, cacheProperties);
             }
         };
 

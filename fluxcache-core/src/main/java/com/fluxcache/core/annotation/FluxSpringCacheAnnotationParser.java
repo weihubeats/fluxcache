@@ -107,6 +107,7 @@ public class FluxSpringCacheAnnotationParser implements FluxCacheAnnotationParse
         FluxCacheOperation fluxCacheOperation = new FluxMultilevelCacheCacheable.Builder()
             .setFirstCacheConfig(firstCacheConfig)
             .setSecondaryCacheable(secondaryCacheable)
+            .setAllowCacheNull(ca.allowCacheNull())
             .setFluxCacheLevel(cacheLevel)
             .setCacheName(ca.cacheName())
             .setMethodName(ae.toString())

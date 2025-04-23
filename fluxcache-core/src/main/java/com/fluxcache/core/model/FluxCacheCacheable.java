@@ -19,12 +19,15 @@ public class FluxCacheCacheable extends FluxCacheOperation{
 
     private final int maxSize;
 
+    private final boolean allowCacheNull;
+
     public FluxCacheCacheable(Builder b) {
         super(b);
         this.ttl = b.ttl;
         this.initSize = b.initSize;
         this.unit = b.unit;
         this.maxSize = b.maxSize;
+        this.allowCacheNull = b.allowCacheNull;
     }
 
     public static class Builder extends FluxCacheOperation.Builder {
@@ -36,6 +39,8 @@ public class FluxCacheCacheable extends FluxCacheOperation{
         private TimeUnit unit;
 
         private int maxSize;
+
+        private boolean allowCacheNull;
 
         public FluxCacheCacheable.Builder setTtl(Long ttl) {
             this.ttl = ttl;
@@ -54,6 +59,11 @@ public class FluxCacheCacheable extends FluxCacheOperation{
 
         public FluxCacheCacheable.Builder setMaxSize(int maxSize) {
             this.maxSize = maxSize;
+            return this;
+        }
+
+        public FluxCacheCacheable.Builder setAllowCacheNull(boolean allowCacheNull) {
+            this.allowCacheNull = allowCacheNull;
             return this;
         }
 

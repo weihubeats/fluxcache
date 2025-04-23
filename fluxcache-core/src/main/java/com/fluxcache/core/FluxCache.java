@@ -79,6 +79,12 @@ public interface FluxCache<K, V> extends LocalCache<K, V> {
         return false;
     }
 
+    /**
+     * 是否缓存null
+     * @return
+     */
+    boolean allowCacheNull();
+
     @FunctionalInterface
     interface ValueWrapper<V> {
 
