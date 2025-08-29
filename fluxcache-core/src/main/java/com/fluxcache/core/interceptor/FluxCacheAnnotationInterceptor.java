@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.cache.interceptor.CacheOperationInvoker;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -56,7 +55,7 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
 
         try {
             return execute(aopAllianceInvoker, target, method, invocation.getArguments());
-        } catch (CacheOperationInvoker.ThrowableWrapper th) {
+        } catch (FluxCacheOperationInvoker.ThrowableWrapper th) {
             throw th.getOriginal();
         }
     }
