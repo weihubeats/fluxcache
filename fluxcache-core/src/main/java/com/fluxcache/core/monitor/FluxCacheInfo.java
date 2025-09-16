@@ -1,8 +1,9 @@
 package com.fluxcache.core.monitor;
 
+import lombok.Data;
+
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import lombok.Data;
 
 /**
  * @author : wh
@@ -15,49 +16,47 @@ public class FluxCacheInfo {
     /**
      * 命中次数
      */
-    private LongAdder hit;
+    private final LongAdder hit = new LongAdder();
 
     /**
-     * 失败次数
+     * 未命中次数
      */
-    private LongAdder fail;
+    private final LongAdder fail = new LongAdder();
 
     /**
      * 删除次数
      */
-    private LongAdder evictCount;
+    private final LongAdder evictCount = new LongAdder();
 
     /**
      * 更新次数
      */
-    private LongAdder putCount;
+    private final LongAdder putCount = new LongAdder();
 
     /**
-     * 请求次数
+     * 请求次数（命中 + 未命中）
      */
-    private LongAdder requestCount;
+    private final LongAdder requestCount = new LongAdder();
 
     /**
-     * 最大加载时间
+     * 当前窗口内的最大加载耗时（毫秒）
      */
-    private AtomicLong maxLoadTime;
+    private final AtomicLong maxLoadTime = new AtomicLong(0L);
 
     /**
-     * 开始时间
+     * 窗口开始时间（毫秒时间戳）
      */
-    private AtomicLong startTime;
+    private final AtomicLong startTime = new AtomicLong(0L);
 
     /**
-     * 结束时间
+     * 窗口结束时间（毫秒时间戳）
      */
-    private AtomicLong endTime;
+    private final AtomicLong endTime = new AtomicLong(0L);
 
-    public FluxCacheInfo() {
-        this.hit = new LongAdder();
-        this.fail = new LongAdder();
-        this.evictCount = new LongAdder();
-        this.putCount = new LongAdder();
-        this.requestCount = new LongAdder();
-        this.maxLoadTime = new AtomicLong(Long.MIN_VALUE);
+    public static FluxCacheInfo startAt(long startMillis, long windowMillis) {
+        FluxCacheInfo info = new FluxCacheInfo();
+        info.getStartTime().set(startMillis);
+        info.getEndTime().set(startMillis + windowMillis);
+        return info;
     }
 }

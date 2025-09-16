@@ -1,13 +1,14 @@
 package com.fluxcache.core.annotation;
 
 import com.fluxcache.core.enums.FluxCacheLevel;
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import org.springframework.core.annotation.AliasFor;
 
 /**
  * @author : wh
@@ -41,5 +42,10 @@ public @interface FluxCacheable {
      * @return
      */
     FluxCacheLevel fluxCacheLevel() default FluxCacheLevel.NULL;
+
+    /**
+     * 配置缓存定时刷新功能
+     */
+    FluxRefresh refresh() default @FluxRefresh();
 
 }

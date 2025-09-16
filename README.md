@@ -220,6 +220,59 @@ public class MyFluxCacheDataRegistered implements FluxCacheDataRegistered {
 }
 ```
 
+## 缓存刷新
+
+如果需要定时刷新缓存,可以使用`@FluxRefresh`注解
+
+```java
+    @Override
+    @FluxCacheable(
+        cacheName = "testRefreshCache",
+        key = "'all'",
+        refresh = @FluxRefresh(
+            enabled = true,
+            provider = StudentProvider.class,
+            cron = "0/2 * * * * ?" // 0 */1 * * * ? 一分钟
+        )
+    )
+```
+
+`provider`需要实现`FluxPreheatDataProvider`接口，然后提供自己需要刷新缓存的key,并注入spring容器
+
+```java
+@Service
+public class StudentProvider implements FluxPreheatDataProvider<String> {
+    
+    
+    @Override
+    public Collection<String> getPreheatData() {
+        return List.of("all");
+    }
+}
+
+```
+
+如果需要开启缓存预热
+使用`preheatOnStartup = true,`即可
+
+```java
+    @Override
+@FluxCacheable(
+    cacheName = "multipleKeys",
+    key = "#name",
+    refresh = @FluxRefresh(
+        enabled = true,
+        provider = StudentMultipleKeysProvider.class,
+        preheatOnStartup = true,
+        cron = "0 */1 * * * ?" // 1分钟刷新一次
+    )
+)
+public List<StudentVO> multipleKeys(String name) {
+    log.info("开始查询数据");
+    return randomStudents(name);
+}
+```
+
 ## 内置缓存管理接口
 
 默认同意请求前缀为`/cache/manager/v1`，详细接口返回情况可以查看[FluxCacheController.java](fluxcache-admin%2Fsrc%2Fmain%2Fjava%2Fcom%2Ffluxcache%2Fadmin%2Fcontroller%2FFluxCacheController.java)

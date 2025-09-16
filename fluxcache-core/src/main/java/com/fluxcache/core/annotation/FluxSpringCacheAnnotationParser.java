@@ -1,12 +1,17 @@
 package com.fluxcache.core.annotation;
 
 import com.fluxcache.core.enums.FluxCacheLevel;
-import com.fluxcache.core.model.FluxCacheCacheableConfig;
+import com.fluxcache.core.model.FluxCacheConfig;
 import com.fluxcache.core.model.FluxCacheEvictOperation;
 import com.fluxcache.core.model.FluxCacheOperation;
 import com.fluxcache.core.model.FluxCachePutOperation;
 import com.fluxcache.core.model.FluxMultilevelCacheCacheable;
 import com.fluxcache.core.properties.FluxCacheProperties;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.lang.Nullable;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
@@ -14,10 +19,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
-import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.lang.Nullable;
 
 /**
  * @author : wh
@@ -56,21 +57,21 @@ public class FluxSpringCacheAnnotationParser implements FluxCacheAnnotationParse
     @Nullable
     private FluxCacheOperation parseCacheAnnotation(AnnotatedElement ae, boolean localOnly) {
         Collection<? extends Annotation> anns = (localOnly ?
-            AnnotatedElementUtils.getAllMergedAnnotations(ae, CACHE_OPERATION_ANNOTATIONS) :
-            AnnotatedElementUtils.findAllMergedAnnotations(ae, CACHE_OPERATION_ANNOTATIONS));
+                AnnotatedElementUtils.getAllMergedAnnotations(ae, CACHE_OPERATION_ANNOTATIONS) :
+                AnnotatedElementUtils.findAllMergedAnnotations(ae, CACHE_OPERATION_ANNOTATIONS));
         if (anns.isEmpty()) {
             return null;
         }
 
         final Collection<FluxCacheOperation> ops = new ArrayList<>(1);
         anns.stream().filter(ann -> ann instanceof FluxCacheEvict).forEach(
-            ann -> ops.add(parseEvictAnnotation(ae, (FluxCacheEvict) ann)));
+                ann -> ops.add(parseEvictAnnotation(ae, (FluxCacheEvict) ann)));
 
         anns.stream().filter(ann -> ann instanceof FluxCachePut).forEach(
-            ann -> ops.add(parsePutAnnotation(ae, (FluxCachePut) ann)));
+                ann -> ops.add(parsePutAnnotation(ae, (FluxCachePut) ann)));
 
         anns.stream().filter(ann -> ann instanceof FluxCacheable).forEach(
-            ann -> ops.add(parseFluxCacheableAnnotation(ae, (FluxCacheable) ann)));
+                ann -> ops.add(parseFluxCacheableAnnotation(ae, (FluxCacheable) ann)));
 
         if (ops.size() > 1) {
             throw new RuntimeException("flux cache Only single operations are supported");
@@ -87,10 +88,10 @@ public class FluxSpringCacheAnnotationParser implements FluxCacheAnnotationParse
      */
     private FluxCacheOperation parsePutAnnotation(AnnotatedElement ae, FluxCachePut cp) {
         return new FluxCachePutOperation.Builder()
-            .setMethodName(ae.toString())
-            .setCacheName(cp.cacheName())
-            .setKey(cp.key())
-            .build();
+                .setMethodName(ae.toString())
+                .setCacheName(cp.cacheName())
+                .setKey(cp.key())
+                .build();
     }
 
     /**
@@ -101,18 +102,18 @@ public class FluxSpringCacheAnnotationParser implements FluxCacheAnnotationParse
      * @return
      */
     private FluxCacheOperation parseFluxCacheableAnnotation(AnnotatedElement ae, FluxCacheable ca) {
-        FluxCacheCacheableConfig firstCacheConfig = new FluxCacheCacheableConfig(ca.firstCacheable());
+        FluxCacheConfig firstCacheConfig = new FluxCacheConfig(ca.firstCacheable());
         FluxCacheLevel cacheLevel = cacheProperties.fluxCacheLevel(ca.fluxCacheLevel());
-        FluxCacheCacheableConfig secondaryCacheable = FluxCacheLevel.isSecondaryCacheable(cacheLevel) ? new FluxCacheCacheableConfig(ca.secondaryCacheable()) : null;
+        FluxCacheConfig secondaryCacheable = FluxCacheLevel.isSecondaryCacheable(cacheLevel) ? new FluxCacheConfig(ca.secondaryCacheable()) : null;
         FluxCacheOperation fluxCacheOperation = new FluxMultilevelCacheCacheable.Builder()
-            .setFirstCacheConfig(firstCacheConfig)
-            .setSecondaryCacheable(secondaryCacheable)
-            .setAllowCacheNull(ca.allowCacheNull())
-            .setFluxCacheLevel(cacheLevel)
-            .setCacheName(ca.cacheName())
-            .setMethodName(ae.toString())
-            .setKey(ca.key())
-            .build();
+                .setFirstCacheConfig(firstCacheConfig)
+                .setSecondaryCacheable(secondaryCacheable)
+                .setAllowNullValues(ca.allowCacheNull())
+                .setFluxCacheLevel(cacheLevel)
+                .setCacheName(ca.cacheName())
+                .setMethodName(ae.toString())
+                .setKey(ca.key())
+                .build();
         return fluxCacheOperation;
     }
 
@@ -125,9 +126,9 @@ public class FluxSpringCacheAnnotationParser implements FluxCacheAnnotationParse
      */
     private FluxCacheOperation parseEvictAnnotation(AnnotatedElement ae, FluxCacheEvict ce) {
         return new FluxCacheEvictOperation.Builder().setMethodName(ae.toString())
-            .setCacheName(ce.cacheName())
-            .setKey(ce.key())
-            .build();
+                .setCacheName(ce.cacheName())
+                .setKey(ce.key())
+                .build();
     }
 
 }

@@ -6,7 +6,6 @@ import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.impl.FluxRedissonCaffeineCache;
 import com.fluxcache.core.model.DeleteCacheDTO;
 import com.fluxcache.core.properties.FluxCacheProperties;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RTopic;
@@ -15,6 +14,8 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.Ordered;
 import org.springframework.util.ObjectUtils;
+
+import java.util.Objects;
 
 /**
  * @author : wh

@@ -3,13 +3,14 @@ package com.fluxcache.core.impl;
 import com.fluxcache.core.enums.CacheOrder;
 import com.fluxcache.core.monitor.FluxCacheMonitor;
 import com.fluxcache.core.properties.FluxCacheProperties;
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
-import lombok.Getter;
 
 /**
  * @author : wh
@@ -26,11 +27,11 @@ public class FluxRedissonCaffeineCache<K, V> extends FluxAbstractValueAdaptingCa
     /**
      * Create an {@code AbstractValueAdaptingCache} with the given setting.
      *
-     * @param allowCacheNull 
+     * @param allowCacheNull whether to allow for {@code null} values
      */
     protected FluxRedissonCaffeineCache(boolean allowCacheNull, String name,
-        FluxAbstractValueAdaptingCache<K, V> fluxFirstCache, FluxAbstractValueAdaptingCache<K, V> fluxSecondaryCache,
-        FluxCacheMonitor cacheMonitor, FluxCacheProperties cacheProperties) {
+                                        FluxAbstractValueAdaptingCache<K, V> fluxFirstCache, FluxAbstractValueAdaptingCache<K, V> fluxSecondaryCache,
+                                        FluxCacheMonitor cacheMonitor, FluxCacheProperties cacheProperties) {
         super(allowCacheNull, cacheMonitor, name, cacheProperties);
         this.fluxFirstCache = fluxFirstCache;
         this.fluxSecondaryCache = fluxSecondaryCache;
@@ -38,23 +39,28 @@ public class FluxRedissonCaffeineCache<K, V> extends FluxAbstractValueAdaptingCa
 
     @Override
     public Map<K, V> getValues(List<K> keys) {
-        return getAll(keys);
+        return getAllMerged(keys);
     }
 
-    private Map<K, V> getAll(List<K> keys) {
-        List<K> list = new ArrayList<>(keys);
-        Map<K, V> firstCacheValues = fluxFirstCache.getValuesAsync(keys);
-        Map<K, V> res = new HashMap<>(firstCacheValues);
-        list.removeAll(firstCacheValues.keySet());
-        Map<K, V> secondaryCacheValues = fluxSecondaryCache.getValuesAsync(list);
-        res.putAll(secondaryCacheValues);
-        fluxFirstCache.putAllAsync(secondaryCacheValues);
+    private Map<K, V> getAllMerged(List<K> keys) {
+
+        List<K> remain = new ArrayList<>(keys);
+        Map<K, V> first = fluxFirstCache.getValues(remain);
+        Map<K, V> res = new HashMap<>(first);
+        remain.removeAll(first.keySet());
+        if (!remain.isEmpty()) {
+            Map<K, V> second = fluxSecondaryCache.getValues(remain);
+            res.putAll(second);
+            if (!second.isEmpty()) {
+                fluxFirstCache.putAllAsync(second);
+            }
+        }
         return res;
     }
 
     @Override
     public Map<K, V> getValuesAsync(List<K> keys) {
-        return getAll(keys);
+        return getAllMerged(keys);
     }
 
     @Override

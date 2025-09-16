@@ -14,13 +14,6 @@ import com.fluxcache.core.enums.FluxCacheType;
 import com.fluxcache.example.config.MyFluxCacheDataRegistered;
 import com.fluxcache.example.vo.StudentVO;
 import com.google.common.collect.Lists;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
@@ -29,6 +22,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author : wh
@@ -309,7 +310,7 @@ public class TestController {
 
     private List<StudentVO> mockSelectSql() {
         log.info("开始查询数据");
-        return Lists.newArrayList(new StudentVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new StudentVO(2L, "小奏技术1", RandomUtils.nextInt(1, 1000)));
+        return Lists.newArrayList(new StudentVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new StudentVO(2L, "小奏技术1", RandomUtils.nextInt(1, 10000)));
     }
 
     private List<StudentVO> mockSelectSqlToNull() {
@@ -319,7 +320,6 @@ public class TestController {
 
     private Optional<List<StudentVO>> mockSelectSqlAndOptional() {
         log.info("开始查询数据");
-        return Optional.of(Lists.newArrayList(new StudentVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new StudentVO(2L, "小奏技术1", RandomUtils.nextInt(1, 1000))));
-    }
+        return Optional.of(Lists.newArrayList(new StudentVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new StudentVO(2L, "小奏技术1", RandomUtils.nextInt(1, 10000))));    }
 
 }

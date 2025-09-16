@@ -11,9 +11,9 @@ import lombok.Getter;
 @Getter
 public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
 
-    private final FluxCacheCacheableConfig firstCacheConfig;
+    private final FluxCacheConfig firstCacheConfig;
 
-    private final FluxCacheCacheableConfig secondaryCacheConfig;
+    private final FluxCacheConfig secondaryCacheConfig;
 
     private final boolean allowCacheNull;
 
@@ -25,46 +25,47 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
     }
 
     public FluxMultilevelCacheCacheable(CacheConfigBuilder builder) {
-        super(builder.cacheName, builder.fluxCacheLevel);
+        super(builder.cacheName, builder.FluxCacheLevel);
         this.firstCacheConfig = builder.firstCacheConfig;
         this.secondaryCacheConfig = builder.secondaryCacheConfig;
         this.allowCacheNull = builder.allowNullValues;
     }
 
-    public FluxCacheOperation convertsFluxCacheCacheable(FluxCacheCacheableConfig cacheableConfig) {
+    public FluxCacheOperation convertsFluxCacheCacheable(FluxCacheConfig cacheableConfig) {
 
         return new FluxCacheCacheable.Builder()
-            .setUnit(cacheableConfig.getUnit())
-            .setTtl(cacheableConfig.getTtl())
-            .setInitSize(cacheableConfig.getInitSize())
-            .setMaxSize(cacheableConfig.getMaxSize())
-            .setAllowCacheNull(this.allowCacheNull)
-            .setCacheName(this.getCacheName())
-            .setKey(this.getKey())
-            .setMethodName(this.getMethodName())
-            .build();
+                .setUnit(cacheableConfig.getUnit())
+                .setTtl(cacheableConfig.getTtl())
+                .setInitSize(cacheableConfig.getInitSize())
+                .setMaxSize(cacheableConfig.getMaxSize())
+                .setAllowCacheNull(this.isAllowCacheNull())
+                .setCacheName(this.getCacheName())
+                .setKey(this.getKey())
+                .setMethodName(this.getMethodName())
+                .build();
     }
+
 
     public static class Builder extends FluxCacheOperation.Builder {
 
-        private FluxCacheCacheableConfig firstCacheConfig;
+        private FluxCacheConfig firstCacheConfig;
 
-        private FluxCacheCacheableConfig secondaryCacheConfig;
+        private FluxCacheConfig secondaryCacheConfig;
 
         private boolean allowNullValues;
 
-        public Builder setFirstCacheConfig(FluxCacheCacheableConfig firstCacheConfig) {
+        public Builder setFirstCacheConfig(FluxCacheConfig firstCacheConfig) {
             this.firstCacheConfig = firstCacheConfig;
             return this;
         }
 
-        public Builder setSecondaryCacheable(FluxCacheCacheableConfig secondaryCacheConfig) {
+        public Builder setSecondaryCacheable(FluxCacheConfig secondaryCacheConfig) {
             this.secondaryCacheConfig = secondaryCacheConfig;
             return this;
         }
 
-        public Builder setAllowCacheNull(boolean allowCacheNull) {
-            this.allowNullValues = allowCacheNull;
+        public Builder setAllowNullValues(boolean allowNullValues) {
+            this.allowNullValues = allowNullValues;
             return this;
         }
 
@@ -74,6 +75,9 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
         }
     }
 
+    /**
+     * 手动注册 todo Builder and CacheConfigBuilder is reduce
+     */
     public static class CacheConfigBuilder {
 
         /**
@@ -81,11 +85,11 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
          */
         private String cacheName;
 
-        private FluxCacheLevel fluxCacheLevel;
+        private FluxCacheLevel FluxCacheLevel;
 
-        private FluxCacheCacheableConfig firstCacheConfig;
+        private FluxCacheConfig firstCacheConfig;
 
-        private FluxCacheCacheableConfig secondaryCacheConfig;
+        private FluxCacheConfig secondaryCacheConfig;
 
         private boolean allowNullValues;
 
@@ -94,17 +98,17 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
             return this;
         }
 
-        public CacheConfigBuilder setFluxCacheLevel(FluxCacheLevel fluxCacheLevel) {
-            this.fluxCacheLevel = fluxCacheLevel;
+        public CacheConfigBuilder setFluxCacheLevel(FluxCacheLevel FluxCacheLevel) {
+            this.FluxCacheLevel = FluxCacheLevel;
             return this;
         }
 
-        public CacheConfigBuilder setFirstCacheConfig(FluxCacheCacheableConfig firstCacheConfig) {
+        public CacheConfigBuilder setFirstCacheConfig(FluxCacheConfig firstCacheConfig) {
             this.firstCacheConfig = firstCacheConfig;
             return this;
         }
 
-        public CacheConfigBuilder setSecondaryCacheConfig(FluxCacheCacheableConfig secondaryCacheConfig) {
+        public CacheConfigBuilder setSecondaryCacheConfig(FluxCacheConfig secondaryCacheConfig) {
             this.secondaryCacheConfig = secondaryCacheConfig;
             return this;
         }

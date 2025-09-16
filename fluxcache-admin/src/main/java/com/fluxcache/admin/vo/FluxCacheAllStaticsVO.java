@@ -2,10 +2,9 @@ package com.fluxcache.admin.vo;
 
 import com.fluxcache.core.monitor.FluxCacheInfo;
 import com.fluxcache.core.monitor.FluxCacheStatics;
-import java.util.LinkedList;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * @author : wh
@@ -15,41 +14,48 @@ import lombok.Data;
 @Data
 public class FluxCacheAllStaticsVO {
 
-    private LinkedList<FluxCacheStaticsVO> fluxCacheStaticsVOS;
 
     private Long startTime;
 
     private String cacheName;
 
-    public FluxCacheAllStaticsVO(String cacheName, FluxCacheStatics fluxCacheStatics) {
-        this.startTime = fluxCacheStatics.getStartTime();
-        this.cacheName = cacheName;
-        this.fluxCacheStaticsVOS = getFluxCacheStaticsVOS(fluxCacheStatics);
+
+    /**
+     * 窗口明细（从旧到新）
+     */
+    private List<FluxCacheStaticsVO> windows;
+
+    private long totalHit;
+
+    private long totalMiss;
+
+    private long totalPut;
+
+    private long totalEvict;
+
+    private long totalRequest;
+
+    // 所有窗口的最大加载耗时
+    private long maxLoadTimeOverall;
+
+    // 命中率（0~1）
+    private double overallHitRate;
+
+    public FluxCacheAllStaticsVO(String cacheName, FluxCacheStatics statics) {
+        FluxCacheStatsAssembler.fill(this, cacheName, statics, Integer.MAX_VALUE);
     }
 
-    private LinkedList<FluxCacheStaticsVO> getFluxCacheStaticsVOS(FluxCacheStatics fluxCacheStatics) {
-        LinkedList<FluxCacheStaticsVO> list = new LinkedList<>();
-        fluxCacheStatics.getFluxCacheInfos().forEach(fluxCacheInfo -> {
-            FluxCacheStaticsVO vo = new FluxCacheStaticsVO();
-            vo.setEvictCount(fluxCacheInfo.getEvictCount());
-            vo.setHit(fluxCacheInfo.getHit());
-            vo.setFail(fluxCacheInfo.getFail());
-            vo.setPutCount(fluxCacheInfo.getPutCount());
-            vo.setMaxLoadTime(fluxCacheInfo.getMaxLoadTime().get() == Long.MIN_VALUE ? new AtomicLong(0) : fluxCacheInfo.getMaxLoadTime());
-            vo.setRequestCount(fluxCacheInfo.getRequestCount());
-            vo.setHitRate(getHitRate(fluxCacheInfo));
-            vo.setStartTime(fluxCacheInfo.getStartTime().get());
-            vo.setEndTime(Objects.nonNull(fluxCacheInfo.getEndTime()) ? fluxCacheInfo.getEndTime().get() : System.currentTimeMillis());
-            list.add(vo);
-        });
-        return list;
+    /**
+     * 支持只取最近 N 个窗口（例如最近 24 个窗口=最近 12 小时）
+     */
+    public FluxCacheAllStaticsVO(String cacheName, FluxCacheStatics statics, int lastNWindows) {
+        FluxCacheStatsAssembler.fill(this, cacheName, statics, lastNWindows);
     }
 
-    private Double getHitRate(FluxCacheInfo info) {
-        if (info.getHit().longValue() > 0) {
-            return info.getHit().doubleValue() / info.getRequestCount().doubleValue();
-        } else {
-            return 0.0;
-        }
+    /**
+     * 也支持从外部传入已截取的窗口，按需组装
+     */
+    public FluxCacheAllStaticsVO(String cacheName, long startTime, List<FluxCacheInfo> buckets) {
+        FluxCacheStatsAssembler.fill(this, cacheName, startTime, buckets);
     }
 }
