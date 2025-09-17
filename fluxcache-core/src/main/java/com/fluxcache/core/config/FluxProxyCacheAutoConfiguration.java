@@ -136,6 +136,7 @@ public class FluxProxyCacheAutoConfiguration {
 
 
     @Bean
+    @ConditionalOnClass(RedissonClient.class)
     public FluxRefreshTaskRegistrar cacheRefreshTaskRegistrar(ApplicationContext context, TaskScheduler taskScheduler,
                                                               FluxCacheManager cacheManager, RedissonClient redissonClient) {
         return new FluxRefreshTaskRegistrar(context, taskScheduler, cacheManager, redissonClient, new FluxCacheRefreshExecutor());

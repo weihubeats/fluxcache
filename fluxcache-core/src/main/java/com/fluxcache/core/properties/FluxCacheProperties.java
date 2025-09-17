@@ -94,7 +94,11 @@ public class FluxCacheProperties {
      * @return
      */
     public FluxCacheLevel fluxCacheLevel(FluxCacheLevel cacheLevel) {
-        return Objects.equals(cacheLevel, FluxCacheLevel.NULL) ? this.defaultCacheLevel : cacheLevel;
+        if (Objects.isNull(cacheLevel) || Objects.equals(cacheLevel, FluxCacheLevel.NULL)) {
+            return this.defaultCacheLevel;
+        }
+        return cacheLevel;
+        
     }
 
     public String namespace() {
