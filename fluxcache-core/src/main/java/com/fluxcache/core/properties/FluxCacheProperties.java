@@ -2,13 +2,14 @@ package com.fluxcache.core.properties;
 
 import com.fluxcache.core.enums.FluxCacheLevel;
 import com.fluxcache.core.enums.FluxCacheType;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.util.ObjectUtils;
+
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import static com.fluxcache.core.properties.FluxCacheProperties.FLUX_CACHE;
 
@@ -26,6 +27,7 @@ public class FluxCacheProperties {
     @Value("${spring.application.name}")
     private String applicationName;
 
+
     private String namespace;
 
     /**
@@ -42,6 +44,17 @@ public class FluxCacheProperties {
      * 是否开启异步监控
      */
     private boolean asyncMonitorEnable = true;
+
+    /**
+     * 是否缓存null
+     */
+    private boolean allowCacheNull = true;
+
+    /**
+     * 是否缓存Optional.empty()
+     */
+    private boolean allowCacheEmptyOptional = true;
+
 
     @NestedConfigurationProperty
     private FirstCacheConfig firstCache;
@@ -71,7 +84,7 @@ public class FluxCacheProperties {
          */
         private TimeUnit timeUnit = TimeUnit.MINUTES;
 
-        private FluxCacheType fluxCacheType;
+        private FluxCacheType cacheType;
 
     }
 
@@ -80,8 +93,12 @@ public class FluxCacheProperties {
      *
      * @return
      */
-    public FluxCacheLevel fluxCacheLevel(FluxCacheLevel fluxCacheLevel) {
-        return Objects.equals(fluxCacheLevel, FluxCacheLevel.NULL) ? this.defaultCacheLevel : fluxCacheLevel;
+    public FluxCacheLevel fluxCacheLevel(FluxCacheLevel cacheLevel) {
+        if (Objects.isNull(cacheLevel) || Objects.equals(cacheLevel, FluxCacheLevel.NULL)) {
+            return this.defaultCacheLevel;
+        }
+        return cacheLevel;
+        
     }
 
     public String namespace() {

@@ -3,12 +3,15 @@ package com.fluxcache.core.monitor;
 import com.fluxcache.core.config.CacheThreadPoolExecutor;
 import com.fluxcache.core.model.FluxCacheOperation;
 import com.fluxcache.core.properties.FluxCacheProperties;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.util.TriConsumer;
+import org.springframework.util.ObjectUtils;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * @author : wh
@@ -18,13 +21,13 @@ import org.apache.logging.log4j.util.TriConsumer;
 @RequiredArgsConstructor
 public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
 
-    private static final Map<MonitorEventEnum, TriConsumer<FluxCacheStatics, Long, Long>> enumBiConsumerMap = new HashMap<>();
+    private static final Map<MonitorEventEnum, TriConsumer<FluxCacheStatics, Long, Long>> EVENT_APPLIERS = new HashMap<>();
 
     static {
-        enumBiConsumerMap.put(MonitorEventEnum.CACHE_HIT, FluxCacheStatics::incrementHit);
-        enumBiConsumerMap.put(MonitorEventEnum.CACHE_MISSING, FluxCacheStatics::incrementMissing);
-        enumBiConsumerMap.put(MonitorEventEnum.CACHE_PUT, FluxCacheStatics::incrementPut);
-        enumBiConsumerMap.put(MonitorEventEnum.CACHE_EVICT, FluxCacheStatics::incrementEvict);
+        EVENT_APPLIERS.put(MonitorEventEnum.CACHE_HIT, FluxCacheStatics::incrementHit);
+        EVENT_APPLIERS.put(MonitorEventEnum.CACHE_MISSING, FluxCacheStatics::incrementMissing);
+        EVENT_APPLIERS.put(MonitorEventEnum.CACHE_PUT, FluxCacheStatics::incrementPut);
+        EVENT_APPLIERS.put(MonitorEventEnum.CACHE_EVICT, FluxCacheStatics::incrementEvict);
     }
 
     private final CacheThreadPoolExecutor cacheThreadPoolExecutor;
@@ -34,42 +37,51 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
     /**
      * cacheStatics
      */
-    private final ConcurrentMap<String, FluxCacheStatics> cacheStaticsMap = new ConcurrentHashMap<>(16);
+    private final ConcurrentMap<String, FluxCacheStatics> cacheStaticsMap = new ConcurrentHashMap<>(32);
 
     @Override
     public void createCacheStaticsMap(ConcurrentMap<String, FluxCacheOperation> data) {
-        data.forEach((key, value) -> {
-            FluxCacheStatics statics = new FluxCacheStatics();
-            cacheStaticsMap.put(key, statics);
-        });
+        if (ObjectUtils.isEmpty(data)) {
+            return;
+        }
+        data.forEach((cacheName, op) -> cacheStaticsMap.computeIfAbsent(cacheName, k -> new FluxCacheStatics()));
     }
 
     @Override
     public FluxCacheStatics getCacheStatics(String cacheName) {
-        return cacheStaticsMap.getOrDefault(cacheName, new FluxCacheStatics());
+        return cacheStaticsMap.computeIfAbsent(cacheName, k -> new FluxCacheStatics());
     }
 
     @Override
-    public void publishMonitorEvent(FluxCacheMonitorEvent FluxMonitorEvent) {
-        FluxCacheStatics cacheStatics = cacheStaticsMap.get(FluxMonitorEvent.getCacheName());
-        if (cacheStatics.isEmpty()) {
-            cacheStatics.init();
+    public void publishMonitorEvent(FluxCacheMonitorEvent event) {
+        if (ObjectUtils.isEmpty(event) || Objects.isNull(event.getCacheName()) || Objects.isNull(event.getMonitorEventEnum())) {
+            return;
         }
-        MonitorEventEnum eventEnum = FluxMonitorEvent.getMonitorEventEnum();
-        Long loadTime = FluxMonitorEvent.getLoadTime();
-        Long count = FluxMonitorEvent.getCount();
+        FluxCacheStatics statics = cacheStaticsMap.computeIfAbsent(event.getCacheName(), k -> new FluxCacheStatics());
+
+        if (statics.isEmpty()) {
+            statics.init();
+        }
+
+        TriConsumer<FluxCacheStatics, Long, Long> applier = EVENT_APPLIERS.get(event.getMonitorEventEnum());
+        if (Objects.isNull(applier)) {
+            return;
+        }
+
+        Runnable task = () -> applier.accept(statics, event.count(), event.loadTime());
+
         if (cacheProperties.isAsyncMonitorEnable()) {
-            cacheThreadPoolExecutor.execute(() -> {
-                enumBiConsumerMap.get(eventEnum).accept(cacheStatics, count, loadTime);
-            });
+            cacheThreadPoolExecutor.execute(task);
         } else {
-            enumBiConsumerMap.get(eventEnum).accept(cacheStatics, count, loadTime);
+            task.run();
         }
+
     }
 
     @Override
     public void createNewCacheStatics(String cacheName) {
-        cacheStaticsMap.put(cacheName, new FluxCacheStatics());
+        cacheStaticsMap.putIfAbsent(cacheName, new FluxCacheStatics());
+
     }
 }
 

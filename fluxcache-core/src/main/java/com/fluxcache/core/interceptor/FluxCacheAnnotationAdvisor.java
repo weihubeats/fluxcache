@@ -1,8 +1,5 @@
 package com.fluxcache.core.interceptor;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import lombok.NonNull;
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInterceptor;
@@ -20,6 +17,10 @@ import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.util.Assert;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+
 /**
  * @author : wh
  * @date : 2024/11/12 12:42
@@ -34,7 +35,7 @@ public class FluxCacheAnnotationAdvisor extends AbstractPointcutAdvisor implemen
     private final Class<? extends Annotation> annotation;
 
     public FluxCacheAnnotationAdvisor(@NonNull MethodInterceptor advice,
-        @NonNull Class<? extends Annotation> annotation) {
+                                       @NonNull Class<? extends Annotation> annotation) {
         this.advice = advice;
         this.annotation = annotation;
         this.pointcut = buildPointcut();

@@ -11,4 +11,7 @@ import java.util.List;
 public interface StudentService {
 
     List<StudentVO> mockSelectSql();
+
+    List<StudentVO> multipleKeys(String name);
+
 }

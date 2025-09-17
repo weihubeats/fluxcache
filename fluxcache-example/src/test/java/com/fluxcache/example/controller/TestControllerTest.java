@@ -1,17 +1,11 @@
 package com.fluxcache.example.controller;
 
 import com.fluxcache.core.DefaultFluxCacheManager;
-import com.fluxcache.core.monitor.FluxCacheInfo;
-import com.fluxcache.core.monitor.FluxCacheStatics;
-import com.fluxcache.core.properties.FluxCacheProperties;
 import com.fluxcache.example.FluxCacheApplication;
+import com.fluxcache.example.service.StudentService;
 import com.fluxcache.example.vo.StudentVO;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,9 +16,14 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+
 
 /**
  * @author : wh
@@ -50,7 +49,7 @@ public class TestControllerTest {
     private final static Long SLEEP_TIME = 3L;
 
     @Autowired
-    private FluxCacheProperties cacheProperties;
+    private StudentService studentService;
 
     @Autowired
     private TestController testController;
@@ -66,10 +65,10 @@ public class TestControllerTest {
         List<StudentVO> vos1 = testController.firstCacheByCaffeine("aaa");
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
-        assertEquals(age, age1);
+        Assertions.assertEquals(age, age1);
         List<StudentVO> vos2 = testController.firstCacheByCaffeine("bb");
         StudentVO vo2 = vos2.get(0);
-        assertNotEquals(age, vo2.getAge());
+        Assertions.assertNotEquals(age, vo2.getAge());
     }
 
     @Test
@@ -91,16 +90,18 @@ public class TestControllerTest {
         List<StudentVO> vos = vosOptionals.get();
         Optional<List<StudentVO>> vosOptional1s = testController.firstCacheByCaffeineAndOptional(key);
         List<StudentVO> vos1 = vosOptional1s.get();
-        assertEquals(vos, vos1);
+        Assertions.assertEquals(vos, vos1);
+
 
         testController.clearFirstCacheByCaffeineAndOptional(key);
 
         vosOptionals = testController.firstCacheByCaffeineAndOptional(key);
 
-        assertNotEquals(vosOptionals.get(), vos);
+        Assertions.assertNotEquals(vosOptionals.get(), vos);
+
 
         vosOptional1s = testController.firstCacheByCaffeineAndOptional(key);
-        assertEquals(vosOptionals.get(), vosOptional1s.get());
+        Assertions.assertEquals(vosOptionals.get(), vosOptional1s.get());
 
     }
 
@@ -113,11 +114,12 @@ public class TestControllerTest {
         List<StudentVO> vos1 = testController.firstCacheByRedis("aaa");
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
-        assertEquals(age, age1);
+        Assertions.assertEquals(age, age1);
+
 
         List<StudentVO> vos2 = testController.firstCacheByCaffeine("bb");
         StudentVO vo2 = vos2.get(0);
-        assertNotEquals(age, vo2.getAge());
+        Assertions.assertNotEquals(age, vo2.getAge());
     }
 
     @Test
@@ -131,11 +133,11 @@ public class TestControllerTest {
         List<StudentVO> vos1 = testController.firstCacheByRedisBucket(cacheName);
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
-        assertEquals(age, age1);
+        Assertions.assertEquals(age, age1);
 
         List<StudentVO> vos2 = testController.firstCacheByRedisBucket(cacheNameB);
         StudentVO vo2 = vos2.get(0);
-        assertNotEquals(age, vo2.getAge());
+        Assertions.assertNotEquals(age, vo2.getAge());
 
     }
 
@@ -143,9 +145,11 @@ public class TestControllerTest {
     public void testNullFirstCacheByRedisBucket() {
         String cacheName = "abcd-null-bucket";
         List<StudentVO> vos = testController.firstNullCacheByRedisBucket(cacheName);
-        assertNull(vos);
+        Assertions.assertNull(vos);
+
         List<StudentVO> vos1 = testController.firstNullCacheByRedisBucket(cacheName);
-        assertNull(vos1);
+        Assertions.assertNull(vos1);
+
     }
 
     @Test
@@ -159,7 +163,7 @@ public class TestControllerTest {
         List<StudentVO> vos1 = testController.firstCacheByRedisBucket(cacheName);
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
-        assertEquals(age, age1);
+        Assertions.assertEquals(age, age1);
 
         testController.deleteFirstCacheByRedisBucket(cacheName);
         List<StudentVO> vos2 = testController.firstCacheByRedisBucket(cacheName);
@@ -179,7 +183,7 @@ public class TestControllerTest {
         List<StudentVO> vos1 = testController.firstCacheByRedisBucket(cacheName);
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
-        assertEquals(age, age1);
+        Assertions.assertEquals(age, age1);
 
         testController.deleteFirstCacheByRedisBucket(cacheName);
 
@@ -197,7 +201,7 @@ public class TestControllerTest {
         String name = "orderByNull2";
         List<StudentVO> aNull = testController.mockSelectSqlToNullBySecondaryCache(name);
         List<StudentVO> aNull1 = testController.mockSelectSqlToNullBySecondaryCache(name);
-        assertEquals(aNull, aNull1);
+        Assertions.assertEquals(aNull, aNull1);
     }
 
     @Test
@@ -224,7 +228,7 @@ public class TestControllerTest {
         List<StudentVO> vos3 = testController.firstCacheByCaffeine("aaa");
         StudentVO vo3 = vos3.get(0);
         int age3 = vo3.getAge();
-        assertEquals(age2, age3);
+        Assertions.assertEquals(age2, age3);
     }
 
     @Test
@@ -237,7 +241,7 @@ public class TestControllerTest {
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
 
-        assertEquals(age, age1);
+        Assertions.assertEquals(age, age1);
 
         List<StudentVO> vobs = testController.firstCacheByCaffeine("bbb");
         StudentVO vob = vobs.get(0);
@@ -247,7 +251,7 @@ public class TestControllerTest {
         StudentVO vob1 = vosb1.get(0);
         int ageb1 = vob1.getAge();
 
-        assertEquals(ageb, ageb1);
+        Assertions.assertEquals(ageb, ageb1);
 
         testController.clearFirstCacheByCaffeineByName("firstCacheByCaffeine");
         TimeUnit.SECONDS.sleep(SLEEP_TIME);
@@ -256,12 +260,12 @@ public class TestControllerTest {
         StudentVO vo3 = vos3.get(0);
         int age3 = vo3.getAge();
 
-        assertNotEquals(age, age3);
+        Assertions.assertNotEquals(age, age3);
 
         List<StudentVO> vosb3 = testController.firstCacheByCaffeine("bbb");
         StudentVO vob3 = vosb3.get(0);
         int ageb3 = vob3.getAge();
-        assertNotEquals(ageb, ageb3);
+        Assertions.assertNotEquals(ageb, ageb3);
     }
 
     @Test
@@ -288,13 +292,13 @@ public class TestControllerTest {
         List<StudentVO> bb = testController.firstCacheByCaffeine("aa");
         StudentVO vb = bb.get(0);
         int ageB = vb.getAge();
-        assertEquals(age, ageB);
+        Assertions.assertEquals(age, ageB);
         testController.firstCacheByCaffeinePutCache("aa");
         TimeUnit.SECONDS.sleep(SLEEP_TIME);
         List<StudentVO> cc = testController.firstCacheByCaffeine("aa");
         StudentVO vc = cc.get(0);
         int ageC = vc.getAge();
-        assertNotEquals(age, ageC);
+        Assertions.assertNotEquals(age, ageC);
     }
 
     @Test
@@ -316,7 +320,7 @@ public class TestControllerTest {
         List<StudentVO> vos1 = testController.productManualCache("manualProduct");
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
-        assertEquals(age, age1);
+        Assertions.assertEquals(age, age1);
     }
 
     @Test
@@ -327,16 +331,7 @@ public class TestControllerTest {
         List<StudentVO> vos1 = testController.productManualMultiLevelCache("productId1");
         StudentVO vo1 = vos1.get(0);
         int age1 = vo1.getAge();
-        assertEquals(age, age1);
-    }
-
-    @Test
-    public void testFluxCacheInfo() {
-        List<StudentVO> vos = testController.firstCacheByCaffeine("aaa");
-        List<StudentVO> vos1 = testController.firstCacheByCaffeine("aaa");
-        FluxCacheStatics caffeine = cacheManager.getCacheStatics("firstCacheByCaffeine");
-        LinkedList<FluxCacheInfo> list = caffeine.getFluxCacheInfos();
-
+        Assertions.assertEquals(age, age1);
     }
 
     @Test
