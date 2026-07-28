@@ -1,2 +1,3 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+    com.fluxcache.admin.config.FluxCacheAdminAutoConfiguration,\
     com.fluxcache.admin.controller.FluxCacheController

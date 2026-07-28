@@ -291,6 +291,10 @@ public List<StudentVO> multipleKeys(String name) {
 
 `/all/caches`
 
+### 获取全部缓存统计摘要
+
+`/statics/summary`
+
 ### 清理指定缓存
 
 `/evict`
@@ -300,6 +304,8 @@ public List<StudentVO> multipleKeys(String name) {
 `/clear`
 
 # dashboard
+
+独立前端控制台见 [`fluxcache-dashboard`](fluxcache-dashboard/README.md)（Vue 3 + Vite，对接本模块 Admin API）。
 
 ![home-page.png](./docs/images/home-page.png)
 

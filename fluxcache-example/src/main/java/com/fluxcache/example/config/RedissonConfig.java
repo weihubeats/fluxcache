@@ -36,9 +36,9 @@ public class RedissonConfig {
         Config config = new Config();
         SingleServerConfig singleServerConfig = config.useSingleServer();
         singleServerConfig.setAddress("redis://" + redisHost + ":" + redisPort + "");
-        if (!ObjectUtils.isEmpty(redisPassword)) {
+/*        if (!ObjectUtils.isEmpty(redisPassword)) {
             singleServerConfig.setPassword(redisPassword);
-        }
+        }*/
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         config.setCodec(new JsonJacksonCodec(objectMapper));

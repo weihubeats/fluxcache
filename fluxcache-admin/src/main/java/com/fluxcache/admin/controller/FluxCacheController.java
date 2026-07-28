@@ -2,10 +2,14 @@ package com.fluxcache.admin.controller;
 
 import com.fluxcache.admin.vo.FluxCacheAllStaticsVO;
 import com.fluxcache.admin.vo.FluxCacheOperationVO;
+import com.fluxcache.admin.vo.FluxCacheStaticsSummaryVO;
 import com.fluxcache.admin.vo.FluxCacheValueVO;
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;
+import com.fluxcache.core.model.FluxCacheOperation;
+import com.fluxcache.core.monitor.FluxCacheStatics;
 import com.fluxcache.core.properties.FluxCacheProperties;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +42,37 @@ public class FluxCacheController {
     public FluxCacheAllStaticsVO getAllStatics(@RequestParam String cacheName) {
         FluxCacheAllStaticsVO vo = new FluxCacheAllStaticsVO(cacheName, cacheManager.getCacheStatics(cacheName));
         return vo;
+    }
+
+    /**
+     * 全部缓存统计摘要（供 Dashboard 总览表格）
+     */
+    @GetMapping("/statics/summary")
+    public FluxCacheStaticsSummaryVO staticsSummary() {
+        List<FluxCacheStaticsSummaryVO.Item> items = new ArrayList<>();
+        List<FluxCacheOperation> operations = cacheManager.getAllCacheMetaData();
+        if (operations != null) {
+            for (FluxCacheOperation op : operations) {
+                if (op == null || op.getCacheName() == null) {
+                    continue;
+                }
+                FluxCacheStatics statics = cacheManager.getCacheStatics(op.getCacheName());
+                if (statics == null) {
+                    items.add(new FluxCacheStaticsSummaryVO.Item(op.getCacheName(), 0D, 0L, 0L, 0L, 0L));
+                    continue;
+                }
+                FluxCacheAllStaticsVO detail = new FluxCacheAllStaticsVO(op.getCacheName(), statics);
+                items.add(new FluxCacheStaticsSummaryVO.Item(
+                        op.getCacheName(),
+                        detail.getOverallHitRate(),
+                        detail.getTotalRequest(),
+                        detail.getTotalHit(),
+                        detail.getTotalMiss(),
+                        detail.getMaxLoadTimeOverall()
+                ));
+            }
+        }
+        return new FluxCacheStaticsSummaryVO(cacheProperties.namespace(), items);
     }
 
     /**
@@ -83,7 +118,7 @@ public class FluxCacheController {
     }
 
     @PostMapping("/clear")
-    public boolean clearCache(String cacheName) {
+    public boolean clearCache(@RequestParam String cacheName) {
         return cacheManager.clearCacheByName(cacheName);
     }
 
