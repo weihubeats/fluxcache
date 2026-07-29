@@ -29,18 +29,11 @@ mvn spring-boot:run
 
 默认端口：`8090`，API 前缀：`/cache/manager/v1`。
 
-各业务服务需开启 CORS（example 已配置）：
+跨域由部署侧自行处理：
 
-```yaml
-flux:
-  cache:
-    admin:
-      cors:
-        enabled: true
-        allowed-origin-patterns:
-          - "http://localhost:*"
-          - "http://127.0.0.1:*"
-```
+- **本地联调 example**：example 已在 `DashboardCorsConfig` 放行 `localhost` / `127.0.0.1`，服务 Base URL 可填 `http://127.0.0.1:8090`
+- **或** 服务 Base URL **留空**，走 Vite 代理（`/cache` → `8090`），无需 CORS
+- **生产**：优先 Nginx / 网关同域反代；勿依赖 admin 库内置 CORS
 
 ### 2. 启动 Dashboard
 

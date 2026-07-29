@@ -1,1 +1,2 @@
+com.fluxcache.core.config.FluxCacheCreatorAutoConfiguration
 com.fluxcache.core.DefaultFluxCacheManager

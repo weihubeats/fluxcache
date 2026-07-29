@@ -4,21 +4,32 @@ import { useRouter } from 'vue-router'
 import { Input, Modal, message } from 'ant-design-vue'
 import type { TableColumnsType } from 'ant-design-vue'
 import {
+  LineChartOutlined,
+  KeyOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+} from '@ant-design/icons-vue'
+import {
   clearCache,
   fetchAllCaches,
   fetchStaticsSummary,
 } from '@/api/cache'
+import CacheLayerCell from '@/components/CacheLayerCell.vue'
+import CacheLevelTag from '@/components/CacheLevelTag.vue'
+import ElKeyCell from '@/components/ElKeyCell.vue'
 import KeyOpsDrawer from '@/components/KeyOpsDrawer.vue'
+import MethodCell from '@/components/MethodCell.vue'
+import OverviewKpiCards from '@/components/OverviewKpiCards.vue'
 import { useServiceStore } from '@/stores/connection'
 import type { CacheOverviewRow } from '@/types/cache'
-import { formatCacheConfig, formatHitRate } from '@/utils/format'
+import { formatHitRate } from '@/utils/format'
 
 const router = useRouter()
 const store = useServiceStore()
 
 const loading = ref(false)
 const rows = ref<CacheOverviewRow[]>([])
-/** empty = all services */
 const filterServiceId = ref<string>('')
 
 const opsOpen = ref(false)
@@ -34,9 +45,16 @@ const serviceOptions = computed(() => [
 ])
 
 const filteredRows = computed(() => {
-  if (!filterServiceId.value) return rows.value
-  return rows.value.filter((r) => r.serviceId === filterServiceId.value)
+  const list = filterServiceId.value
+    ? rows.value.filter((r) => r.serviceId === filterServiceId.value)
+    : rows.value
+  // Keep offline placeholder rows only when that service has no online caches
+  return list
 })
+
+const tableRows = computed(() =>
+  filteredRows.value.filter((r) => r.online || r.cacheName === '-'),
+)
 
 const onlineServices = computed(() =>
   store.enabledServices.filter((s) => store.getRuntime(s.id).status === 'online'),
@@ -46,47 +64,17 @@ const offlineServices = computed(() =>
 )
 
 const columns = computed<TableColumnsType>(() => [
-  { title: '服务', dataIndex: 'serviceName', key: 'serviceName', fixed: 'left', width: 140 },
-  { title: 'Namespace', dataIndex: 'namespace', key: 'namespace', width: 140, ellipsis: true },
-  { title: 'Cache Name', dataIndex: 'cacheName', key: 'cacheName', width: 180, ellipsis: true },
-  { title: 'Level', dataIndex: 'fluxCacheLevel', key: 'fluxCacheLevel', width: 130 },
-  { title: 'Method', dataIndex: 'methodName', key: 'methodName', width: 140, ellipsis: true },
-  { title: 'Key (EL)', dataIndex: 'key', key: 'key', width: 140, ellipsis: true },
-  {
-    title: '一级缓存',
-    key: 'first',
-    width: 200,
-    ellipsis: true,
-    customRender: ({ record }) => formatCacheConfig((record as CacheOverviewRow).firstCacheConfig),
-  },
-  {
-    title: '二级缓存',
-    key: 'second',
-    width: 200,
-    ellipsis: true,
-    customRender: ({ record }) =>
-      formatCacheConfig((record as CacheOverviewRow).secondaryCacheConfig),
-  },
-  {
-    title: '命中率',
-    key: 'hitRate',
-    width: 100,
-    customRender: ({ record }) => {
-      const row = record as CacheOverviewRow
-      return row.online ? formatHitRate(row.hitRate) : '-'
-    },
-  },
-  {
-    title: '请求数',
-    key: 'req',
-    width: 90,
-    customRender: ({ record }) => {
-      const row = record as CacheOverviewRow
-      return row.online ? (row.totalRequest ?? '-') : '-'
-    },
-  },
-  { title: '状态', key: 'status', width: 90 },
-  { title: '操作', key: 'action', fixed: 'right', width: 240 },
+  { title: '服务', key: 'serviceName', fixed: 'left', width: 130 },
+  { title: '缓存名', dataIndex: 'cacheName', key: 'cacheName', width: 160, ellipsis: true },
+  { title: '层级', key: 'level', width: 110 },
+  { title: 'Method', key: 'method', width: 200 },
+  { title: 'Key', key: 'elKey', width: 140 },
+  { title: 'L1', key: 'first', width: 170 },
+  { title: 'L2', key: 'second', width: 170 },
+  { title: '命中率', key: 'hitRate', width: 96, align: 'right' },
+  { title: '请求', key: 'req', width: 80, align: 'right' },
+  { title: '状态', key: 'status', width: 88 },
+  { title: '操作', key: 'action', fixed: 'right', width: 220 },
 ])
 
 async function loadOne(serviceId: string): Promise<CacheOverviewRow[]> {
@@ -96,9 +84,7 @@ async function loadOne(serviceId: string): Promise<CacheOverviewRow[]> {
   try {
     const data = await fetchAllCaches(service)
     const summary = await fetchStaticsSummary(service)
-    const summaryMap = new Map(
-      (summary?.items || []).map((i) => [i.cacheName, i] as const),
-    )
+    const summaryMap = new Map((summary?.items || []).map((i) => [i.cacheName, i] as const))
     const namespace = data.namespace || summary?.namespace || ''
     const ops = data.cacheOperations || []
     store.setRuntime(service.id, {
@@ -209,54 +195,46 @@ function confirmClear(row: CacheOverviewRow) {
   })
 }
 
+function hitRateTone(rate?: number): string {
+  if (rate == null) return ''
+  if (rate >= 0.9) return 'hit-good'
+  if (rate >= 0.7) return 'hit-mid'
+  return 'hit-low'
+}
+
 onMounted(load)
 </script>
 
 <template>
-  <div>
-    <a-row :gutter="[16, 16]" style="margin-bottom: 16px">
-      <a-col :xs="12" :md="6">
-        <div class="page-card kpi">
-          <div class="kpi-label">已配置服务</div>
-          <div class="kpi-value">{{ store.services.length }}</div>
-        </div>
-      </a-col>
-      <a-col :xs="12" :md="6">
-        <div class="page-card kpi">
-          <div class="kpi-label">启用中</div>
-          <div class="kpi-value">{{ store.enabledServices.length }}</div>
-        </div>
-      </a-col>
-      <a-col :xs="12" :md="6">
-        <div class="page-card kpi">
-          <div class="kpi-label">在线</div>
-          <div class="kpi-value ok">{{ onlineServices.length }}</div>
-        </div>
-      </a-col>
-      <a-col :xs="12" :md="6">
-        <div class="page-card kpi">
-          <div class="kpi-label">离线</div>
-          <div class="kpi-value" :class="{ bad: offlineServices.length }">
-            {{ offlineServices.length }}
-          </div>
-        </div>
-      </a-col>
-    </a-row>
+  <div class="overview">
+    <OverviewKpiCards
+      :configured="store.services.length"
+      :enabled="store.enabledServices.length"
+      :online="onlineServices.length"
+      :offline="offlineServices.length"
+    />
 
-    <div class="page-card">
+    <div class="page-card table-card">
       <div class="toolbar">
-        <a-space wrap>
-          <a-typography-title :level="4" style="margin: 0">多服务缓存总览</a-typography-title>
+        <div class="toolbar-left">
+          <h2 class="page-title">缓存总览</h2>
           <a-select
             v-model:value="filterServiceId"
-            style="width: 220px"
+            class="service-filter"
             :options="serviceOptions"
             placeholder="按服务筛选"
+            allow-clear
           />
-        </a-space>
+        </div>
         <a-space>
-          <a-button @click="router.push({ name: 'settings' })">服务管理</a-button>
-          <a-button type="primary" :loading="loading" @click="load">刷新全部</a-button>
+          <a-button @click="router.push({ name: 'settings' })">
+            <template #icon><SettingOutlined /></template>
+            服务管理
+          </a-button>
+          <a-button type="primary" :loading="loading" @click="load">
+            <template #icon><ReloadOutlined /></template>
+            刷新全部
+          </a-button>
         </a-space>
       </div>
 
@@ -270,46 +248,136 @@ onMounted(load)
       />
       <a-alert
         v-else-if="offlineServices.length"
-        type="warning"
+        type="error"
         show-icon
         style="margin-bottom: 16px"
         :message="`${offlineServices.length} 个服务离线`"
-        :description="offlineServices.map((s) => `${s.name}: ${store.getRuntime(s.id).lastError || '未知错误'}`).join('；')"
+        :description="
+          offlineServices
+            .map((s) => `${s.name}: ${store.getRuntime(s.id).lastError || '未知错误'}`)
+            .join('；')
+        "
       />
 
       <a-table
+        class="overview-table"
         row-key="rowKey"
         size="middle"
         :loading="loading"
         :columns="columns"
-        :data-source="filteredRows"
-        :scroll="{ x: 1500 }"
-        :pagination="{ pageSize: 20, showSizeChanger: true }"
+        :data-source="tableRows"
+        :scroll="{ x: 1480 }"
+        :pagination="{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'status'">
-            <a-tag :color="(record as CacheOverviewRow).online ? 'success' : 'error'">
-              {{ (record as CacheOverviewRow).online ? '在线' : '离线' }}
-            </a-tag>
+          <template v-if="column.key === 'serviceName'">
+            <div class="svc-cell">
+              <span class="svc-name">{{ (record as CacheOverviewRow).serviceName }}</span>
+              <span v-if="(record as CacheOverviewRow).online" class="ns mono">
+                {{ (record as CacheOverviewRow).namespace }}
+              </span>
+            </div>
           </template>
+
+          <template v-else-if="column.key === 'cacheName'">
+            <template v-if="(record as CacheOverviewRow).online">
+              <a-typography-text strong class="cache-name">
+                {{ (record as CacheOverviewRow).cacheName }}
+              </a-typography-text>
+            </template>
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'level'">
+            <CacheLevelTag
+              v-if="(record as CacheOverviewRow).online"
+              :level="(record as CacheOverviewRow).fluxCacheLevel"
+            />
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'method'">
+            <MethodCell
+              v-if="(record as CacheOverviewRow).online"
+              :method-name="(record as CacheOverviewRow).methodName"
+            />
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'elKey'">
+            <ElKeyCell
+              v-if="(record as CacheOverviewRow).online"
+              :el-key="(record as CacheOverviewRow).key"
+            />
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'first'">
+            <CacheLayerCell
+              v-if="(record as CacheOverviewRow).online"
+              :config="(record as CacheOverviewRow).firstCacheConfig"
+            />
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'second'">
+            <CacheLayerCell
+              v-if="(record as CacheOverviewRow).online"
+              :config="(record as CacheOverviewRow).secondaryCacheConfig"
+            />
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'hitRate'">
+            <span
+              v-if="(record as CacheOverviewRow).online"
+              class="metric"
+              :class="hitRateTone((record as CacheOverviewRow).hitRate)"
+            >
+              {{ formatHitRate((record as CacheOverviewRow).hitRate) }}
+            </span>
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'req'">
+            <span v-if="(record as CacheOverviewRow).online" class="metric">
+              {{ (record as CacheOverviewRow).totalRequest ?? '—' }}
+            </span>
+            <span v-else class="none-text">—</span>
+          </template>
+
+          <template v-else-if="column.key === 'status'">
+            <a-badge
+              :status="(record as CacheOverviewRow).online ? 'success' : 'error'"
+              :text="(record as CacheOverviewRow).online ? '在线' : '离线'"
+            />
+          </template>
+
           <template v-else-if="column.key === 'action'">
-            <a-space v-if="(record as CacheOverviewRow).online">
-              <a-button type="link" size="small" @click="openDetail(record as CacheOverviewRow)">
+            <div v-if="(record as CacheOverviewRow).online" class="action-group">
+              <a-button size="small" @click="openDetail(record as CacheOverviewRow)">
+                <template #icon><LineChartOutlined /></template>
                 监控
               </a-button>
-              <a-button type="link" size="small" @click="openOps(record as CacheOverviewRow)">
-                Key 运维
+              <a-button size="small" @click="openOps(record as CacheOverviewRow)">
+                <template #icon><KeyOutlined /></template>
+                Key
               </a-button>
-              <a-button
-                type="link"
-                size="small"
-                danger
-                @click="confirmClear(record as CacheOverviewRow)"
+              <a-popconfirm
+                title="确认清空该缓存？"
+                :description="`服务 ${(record as CacheOverviewRow).serviceName} / ${(record as CacheOverviewRow).cacheName}`"
+                ok-text="继续"
+                cancel-text="取消"
+                ok-type="danger"
+                @confirm="confirmClear(record as CacheOverviewRow)"
               >
-                清空
-              </a-button>
-            </a-space>
-            <a-typography-text v-else type="secondary">
+                <a-button size="small" danger>
+                  <template #icon><DeleteOutlined /></template>
+                  清空
+                </a-button>
+              </a-popconfirm>
+            </div>
+            <a-typography-text v-else type="danger" class="offline-err">
               {{ (record as CacheOverviewRow).error || '不可用' }}
             </a-typography-text>
           </template>
@@ -335,20 +403,88 @@ onMounted(load)
   gap: 12px;
   flex-wrap: wrap;
 }
-.kpi-label {
-  color: rgba(0, 0, 0, 0.45);
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.service-filter {
+  width: 220px;
+}
+
+.table-card {
+  padding-top: 18px;
+}
+
+.overview-table :deep(.ant-table-thead > tr > th) {
+  background: #fafbfc;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+}
+
+.svc-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.3;
+}
+
+.svc-name {
+  font-weight: 600;
+  color: #262626;
+}
+
+.ns {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.cache-name {
   font-size: 13px;
 }
-.kpi-value {
-  margin-top: 4px;
-  font-size: 28px;
+
+.none-text {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.metric {
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
-  line-height: 1.2;
+  font-size: 13px;
 }
-.kpi-value.ok {
-  color: #52c41a;
+
+.hit-good {
+  color: #389e0d;
 }
-.kpi-value.bad {
-  color: #ff4d4f;
+.hit-mid {
+  color: #d48806;
+}
+.hit-low {
+  color: #cf1322;
+}
+
+.action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px;
+  flex-wrap: wrap;
+}
+
+.offline-err {
+  font-size: 12px;
+  display: inline-block;
+  max-width: 200px;
 }
 </style>

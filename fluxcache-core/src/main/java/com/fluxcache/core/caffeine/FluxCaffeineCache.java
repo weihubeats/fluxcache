@@ -1,60 +1,44 @@
 package com.fluxcache.core.caffeine;
 
 import com.fluxcache.core.caffeine.sync.CacheSyncStrategy;
-import com.fluxcache.core.enums.CacheOrder;
 import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.model.DeleteCacheDTO;
 import com.fluxcache.core.model.PutCacheDTO;
-import com.fluxcache.core.monitor.FluxCacheMonitor;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import com.fluxcache.core.utils.JsonUtil;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.collect.Lists;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
+
 /**
  * @author : wh
  * @date : 2024/10/6 13:50
- * @description:
  */
 @Slf4j
-public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V> implements LocalCache<K, V> {
+public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V> {
 
-    // todo
     private final CacheSyncStrategy cacheSyncStrategy;
 
     private final FluxCacheProperties fluxCacheProperties;
 
     private final com.github.benmanes.caffeine.cache.Cache cache;
 
-    /**
-     * @param name
-     * @param cache
-     * @param cacheSyncStrategy
-     * @param cacheProperties
-     */
     public FluxCaffeineCache(String name, com.github.benmanes.caffeine.cache.Cache cache,
-        CacheSyncStrategy cacheSyncStrategy, FluxCacheProperties cacheProperties, FluxCacheMonitor cacheMonitor) {
-        this(name, cache, true, cacheSyncStrategy, cacheProperties, cacheMonitor);
+                             CacheSyncStrategy cacheSyncStrategy, FluxCacheProperties cacheProperties) {
+        this(name, cache, true, cacheSyncStrategy, cacheProperties);
     }
 
-    /**
-     * @param name            the name of the cache
-     * @param cache           the backing Caffeine Cache instance
-     * @param allowCacheNull 
-     *                       
-     */
     public FluxCaffeineCache(String name, com.github.benmanes.caffeine.cache.Cache cache,
-        boolean allowCacheNull, CacheSyncStrategy cacheSyncStrategy, FluxCacheProperties cacheProperties,
-        FluxCacheMonitor cacheMonitor) {
-
-        super(allowCacheNull, cacheMonitor, name, cacheProperties);
+                             boolean allowCacheNull, CacheSyncStrategy cacheSyncStrategy,
+                             FluxCacheProperties cacheProperties) {
+        super(allowCacheNull, name);
         Assert.notNull(name, "Name must not be null");
         Assert.notNull(cache, "Cache must not be null");
         this.cache = cache;
@@ -62,22 +46,12 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
         this.fluxCacheProperties = cacheProperties;
     }
 
-    @Override
-    public CacheOrder ordered() {
-        return null;
-    }
-
-    @Override
-    public final String getName() {
-        return this.name;
-    }
-
     public final com.github.benmanes.caffeine.cache.Cache getNativeCache() {
         return this.cache;
     }
 
     @Override
-    public Map<K, V> getValues(List<K> keys) {
+    protected Map<K, V> getValues(List<K> keys) {
         if (this.cache instanceof LoadingCache) {
             return ((LoadingCache<K, V>) this.cache).getAll(keys);
         }
@@ -85,7 +59,7 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
     }
 
     @Override
-    public Map<K, V> getValuesAsync(List<K> keys) {
+    protected Map<K, V> getValuesAsync(List<K> keys) {
         if (this.cache instanceof LoadingCache) {
             return ((LoadingCache<K, V>) this.cache).getAll(keys);
         }
@@ -94,24 +68,24 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
 
     @Override
     protected void putValues(Map<K, V> map) {
-        map.forEach(this::putValue);
+        map.forEach((k, v) -> putValue(k, toStoreValue(v)));
     }
 
     @Override
     protected void putValuesAsync(Map<K, V> map) {
-        map.forEach(this::putValue);
+        map.forEach((k, v) -> putValue(k, toStoreValue(v)));
     }
 
     @SuppressWarnings("unchecked")
     @Override
     @Nullable
-    public V getValue(K key, final Callable<V> valueLoader) {
+    protected V getValue(K key, final Callable<V> valueLoader) {
         return fromStoreValue((V) this.cache.get(key, new LoadFunction(valueLoader)));
     }
 
     @Override
     @Nullable
-    public V lookup(K key) {
+    protected V lookup(K key) {
         if (this.cache instanceof LoadingCache) {
             return ((LoadingCache<K, V>) this.cache).get(key);
         }
@@ -119,8 +93,9 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
     }
 
     @Override
-    public void putValue(K key, @Nullable Object value) {
-        this.cache.put(key, toStoreValue(value));
+    protected void putValue(K key, @Nullable Object value) {
+        // value is already store-adapted when called from put(); putAll path converts in putValues
+        this.cache.put(key, value);
         if (log.isDebugEnabled()) {
             log.debug("caffeine cache put key {} value {}", key, JsonUtil.serialize2Json(value));
         }
@@ -136,7 +111,7 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
     }
 
     @Override
-    public void evictValue(K key) {
+    protected void evictValue(K key) {
         this.cache.invalidate(key);
         this.postEvict(key);
     }
@@ -147,21 +122,16 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
     }
 
     @Override
-    public void bathEvictValue(List<K> keys) {
+    protected void batchEvictValue(List<K> keys) {
         keys.forEach(this.cache::invalidate);
         if (log.isDebugEnabled()) {
-            log.debug("bathEvict key {}", keys);
+            log.debug("batchEvict key {}", keys);
         }
         this.postEvict(keys);
     }
 
-    /**
-     * 本地清理
-     *
-     * @param keys
-     */
     @Override
-    public void bathEvictDirectly(List<K> keys) {
+    public void batchEvictDirectly(List<K> keys) {
         for (K key : keys) {
             this.cache.invalidate(key);
         }
@@ -179,22 +149,12 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
         this.postClear();
     }
 
-    /**
-     * 清理本地缓存 不发送redis通知，防止死循环
-     *
-     * @return
-     */
     @Override
     public boolean clearDirectly() {
         this.cache.invalidateAll();
         return true;
     }
 
-    /**
-     * 更新本地缓存
-     *
-     * @param key
-     */
     @Override
     public void putDirectly(K key, Object value) {
         this.cache.put(key, toStoreValue(value));
@@ -207,18 +167,12 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
         return notEmpty;
     }
 
-    /**
-     * reids topic put
-     */
     protected void sendPutEvent(K key, Object value) {
         PutCacheDTO putCacheDTO = new PutCacheDTO(this.name, key, value);
         putCacheDTO.setTopicName(putCacheDTO.topicName(fluxCacheProperties.namespace()));
         cacheSyncStrategy.sendPutEvent(putCacheDTO);
     }
 
-    /**
-     * 分布式删除缓存
-     */
     protected void postEvict(K key) {
         DeleteCacheDTO deleteCacheDTO = new DeleteCacheDTO(this.name, Lists.newArrayList(key));
         deleteCacheDTO.setTopicName(deleteCacheDTO.topicName(fluxCacheProperties.namespace()));

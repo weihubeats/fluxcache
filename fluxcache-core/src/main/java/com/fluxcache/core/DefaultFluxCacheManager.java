@@ -56,9 +56,11 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
 
     private final FluxCacheMonitor fluxCacheMonitor;
 
+    private final FluxCacheFactory fluxCacheFactory;
+
     @Override
     public void createCache(FluxMultilevelCacheCacheable cacheable) {
-        FluxCache<?, ?> cache = FluxCacheFactory.createFluxCache(cacheable, redissonClient, cacheProperties, cacheSyncStrategy, fluxCacheMonitor);
+        FluxCache<?, ?> cache = fluxCacheFactory.createFluxCache(cacheable, redissonClient, cacheProperties, cacheSyncStrategy, fluxCacheMonitor);
         cacheMap.put(cacheable.getCacheName(), cache);
         fluxCacheMetaData.put(cacheable.getCacheName(), cacheable);
         if (cacheProperties.isCacheMonitorEnable()) {
@@ -133,7 +135,7 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
         if (Objects.isNull(cache)) {
             return false;
         }
-        cache.bathEvict(keys);
+        cache.batchEvict(keys);
         publish(cacheName, MonitorEventEnum.CACHE_EVICT, "*", keys != null ? keys.size() : 0L, 0L);
         log.info("evict cache key {}", keys);
         return true;
@@ -174,7 +176,7 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
                 FluxMultilevelCacheCacheable ca = (FluxMultilevelCacheCacheable) op;
                 if (!cacheMap.containsKey(op.getCacheName())) {
                     // 相同缓存名 只能有一个元数据
-                    FluxCache cache = FluxCacheFactory.createFluxCache(ca, redissonClient, cacheProperties, cacheSyncStrategy, fluxCacheMonitor);
+                    FluxCache cache = fluxCacheFactory.createFluxCache(ca, redissonClient, cacheProperties, cacheSyncStrategy, fluxCacheMonitor);
                     log.info("create cacheName {}", ca.getCacheName());
                     cacheMap.put(op.getCacheName(), cache);
                     fluxCacheMetaData.put(op.getCacheName(), op);

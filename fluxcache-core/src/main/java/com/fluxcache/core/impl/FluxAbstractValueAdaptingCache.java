@@ -3,8 +3,6 @@ package com.fluxcache.core.impl;
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxSimpleValueWrapper;
 import com.fluxcache.core.model.FluxNullValue;
-import com.fluxcache.core.monitor.FluxCacheMonitor;
-import com.fluxcache.core.properties.FluxCacheProperties;
 import org.springframework.lang.Nullable;
 
 import java.util.HashMap;
@@ -14,34 +12,26 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 
 /**
+ * Null-value adapting template for {@link FluxCache}.
+ * Subclasses implement store operations only.
+ *
  * @author : wh
  * @date : 2024/10/6 13:51
- * @description:
  */
 public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<K, V> {
 
-    /**
-     * 是否缓存null
-     */
     private final boolean allowCacheNull;
 
-    private final FluxCacheMonitor cacheMonitor;
+    protected final String name;
 
-    protected String name;
-
-    private final FluxCacheProperties cacheProperties;
-
-    /**
-     * Create an {@code AbstractValueAdaptingCache} with the given setting.
-     *
-     * @param allowCacheNull whether to allow for {@code null} values
-     */
-    protected FluxAbstractValueAdaptingCache(boolean allowCacheNull, FluxCacheMonitor cacheMonitor, String name,
-                                              FluxCacheProperties cacheProperties) {
+    protected FluxAbstractValueAdaptingCache(boolean allowCacheNull, String name) {
         this.allowCacheNull = allowCacheNull;
-        this.cacheMonitor = cacheMonitor;
         this.name = name;
-        this.cacheProperties = cacheProperties;
+    }
+
+    @Override
+    public String getName() {
+        return this.name;
     }
 
     @Override
@@ -56,7 +46,8 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
     public V get(K key, @Nullable Class<V> type) {
         V value = fromStoreValue(lookup(key));
         if (value != null && type != null && !type.isInstance(value)) {
-            throw new IllegalStateException("Cached value is not of required type [" + type.getName() + "]: " + value);
+            throw new IllegalStateException(
+                    "Cached value is not of required type [" + type.getName() + "]: " + value);
         }
         return value;
     }
@@ -80,17 +71,8 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
             throw new IllegalArgumentException(
                     "Cache '" + getName() + "' getAll is configured to not allow null list");
         }
-        Map<K, V> map = getValues(keys);
-        if (map == null || map.isEmpty()) {
-            return Map.of();
-        }
-        Map<K, V> values = new HashMap<>(map);
-        values.replaceAll((k, v) -> fromStoreValue(v));
-        return values;
-
+        return adaptStoreMap(getValues(keys));
     }
-
-    public abstract Map<K, V> getValues(List<K> keys);
 
     @Override
     public Map<K, V> getAllAsync(List<K> keys, Class<V> type) {
@@ -98,10 +80,17 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
             throw new IllegalArgumentException(
                     "Cache '" + getName() + "' getAll is configured to not allow null list");
         }
-        return getValuesAsync(keys);
+        return adaptStoreMap(getValuesAsync(keys));
     }
 
-    public abstract Map<K, V> getValuesAsync(List<K> keys);
+    private Map<K, V> adaptStoreMap(Map<K, V> map) {
+        if (map == null || map.isEmpty()) {
+            return Map.of();
+        }
+        Map<K, V> values = new HashMap<>(map.size());
+        map.forEach((k, v) -> values.put(k, fromStoreValue(v)));
+        return values;
+    }
 
     @Override
     public void putAll(@Nullable Map<K, V> map) {
@@ -121,48 +110,44 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
         putValuesAsync(map);
     }
 
-    protected abstract void putValues(@Nullable Map<K, V> map);
-
-    protected abstract void putValuesAsync(@Nullable Map<K, V> map);
-
     @Override
     public void evict(K key) {
         evictValue(key);
     }
 
     @Override
-    public void bathEvict(List<K> keys) {
-        bathEvictValue(keys);
+    public void batchEvict(List<K> keys) {
+        batchEvictValue(keys);
     }
 
-    @Nullable
-    public abstract V getValue(K key, Callable<V> valueLoader);
+    @Override
+    public boolean allowCacheNull() {
+        return this.allowCacheNull;
+    }
+
+    protected abstract Map<K, V> getValues(List<K> keys);
+
+    protected abstract Map<K, V> getValuesAsync(List<K> keys);
+
+    protected abstract void putValues(@Nullable Map<K, V> map);
+
+    protected abstract void putValuesAsync(@Nullable Map<K, V> map);
 
     @Nullable
-    public abstract void putValue(K key, Object value);
+    protected abstract V getValue(K key, Callable<V> valueLoader);
 
-    @Nullable
-    public abstract void evictValue(K key);
+    protected abstract void putValue(K key, Object value);
 
-    @Nullable
-    public abstract void bathEvictValue(List<K> keys);
+    protected abstract void evictValue(K key);
+
+    protected abstract void batchEvictValue(List<K> keys);
 
     /**
-     * Perform an actual lookup in the underlying store.
-     *
-     * @param key the key whose associated value is to be returned
-     * @return the raw store value for the key, or {@code null} if none
+     * Raw store lookup (may return {@link FluxNullValue}).
      */
     @Nullable
     protected abstract V lookup(K key);
 
-    /**
-     * Convert the given value from the internal store to a user value
-     * returned from the get method (adapting {@code null}).
-     *
-     * @param storeValue the store value
-     * @return the value to return to the user
-     */
     @Nullable
     protected V fromStoreValue(@Nullable V storeValue) {
         if (this.allowCacheNull && storeValue instanceof FluxNullValue) {
@@ -171,13 +156,6 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
         return storeValue;
     }
 
-    /**
-     * Convert the given user value, as passed into the put method,
-     * to a value in the internal store (adapting {@code null}).
-     *
-     * @param userValue the given user value
-     * @return the value to store
-     */
     protected Object toStoreValue(@Nullable Object userValue) {
         if (userValue == null) {
             if (this.allowCacheNull) {
@@ -189,22 +167,8 @@ public abstract class FluxAbstractValueAdaptingCache<K, V> implements FluxCache<
         return userValue;
     }
 
-    /**
-     * Wrap the given store value with a {@link org.springframework.cache.support.SimpleValueWrapper}, also going
-     * through {@link #fromStoreValue} conversion. Useful for {@link #get(Object)}
-     * and {@link #putIfAbsent(Object, Object)} implementations.
-     *
-     * @param storeValue the original value
-     * @return the wrapped value
-     */
     @Nullable
     protected FluxCache.ValueWrapper<V> toValueWrapper(@Nullable V storeValue) {
         return (storeValue != null ? new FluxSimpleValueWrapper<>(fromStoreValue(storeValue)) : null);
     }
-
-    public boolean allowCacheNull() {
-        return this.allowCacheNull;
-    }
-
-
 }

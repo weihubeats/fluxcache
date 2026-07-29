@@ -31,18 +31,18 @@ public class FluxMultilevelCacheCacheable extends FluxCacheOperation {
         this.allowCacheNull = builder.allowNullValues;
     }
 
-    public FluxCacheOperation convertsFluxCacheCacheable(FluxCacheConfig cacheableConfig) {
-
-        return new FluxCacheCacheable.Builder()
-                .setUnit(cacheableConfig.getUnit())
+    public FluxCacheCacheable convertsFluxCacheCacheable(FluxCacheConfig cacheableConfig) {
+        FluxCacheCacheable.Builder builder = new FluxCacheCacheable.Builder();
+        builder.setUnit(cacheableConfig.getUnit())
                 .setTtl(cacheableConfig.getTtl())
                 .setInitSize(cacheableConfig.getInitSize())
                 .setMaxSize(cacheableConfig.getMaxSize())
-                .setAllowCacheNull(this.isAllowCacheNull())
-                .setCacheName(this.getCacheName())
+                .setAllowCacheNull(this.isAllowCacheNull());
+        // parent setters return FluxCacheOperation.Builder; keep typed builder for build()
+        builder.setCacheName(this.getCacheName())
                 .setKey(this.getKey())
-                .setMethodName(this.getMethodName())
-                .build();
+                .setMethodName(this.getMethodName());
+        return builder.build();
     }
 
 

@@ -66,7 +66,7 @@ public class RedissonLocalCacheEvictListener implements ApplicationRunner, Order
         if (deleteCacheDTO.isAll()) {
             caffeineCache.clearDirectly();
         } else {
-            caffeineCache.bathEvictDirectly(deleteCacheDTO.getKeys());
+            caffeineCache.batchEvictDirectly(deleteCacheDTO.getKeys());
         }
         if (log.isDebugEnabled()) {
             log.debug("cacheName {} 本地缓存清除完成 key {}", deleteCacheDTO.getCacheName(), deleteCacheDTO.getKeys());

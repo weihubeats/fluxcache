@@ -52,7 +52,7 @@ import static com.fluxcache.core.constants.ThreadPoolConstant.DEFAULT_QUEUE_SIZE
  */
 @Configuration(proxyBeanMethods = false)
 //@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
-@Import(FluxCacheProperties.class)
+@Import({FluxCacheProperties.class, FluxCacheCreatorAutoConfiguration.class})
 public class FluxProxyCacheAutoConfiguration {
 
     @Bean
