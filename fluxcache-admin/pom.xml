@@ -17,10 +17,10 @@
             <groupId>io.github.weihubeats</groupId>
             <artifactId>fluxcache-core</artifactId>
         </dependency>
-        
+
         <dependency>
-            <groupId>io.github.weihubeats</groupId>
-            <artifactId>fluxcache-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
         <dependency>

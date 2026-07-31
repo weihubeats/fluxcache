@@ -380,48 +380,6 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
         return method.toGenericString() + "::" + expr;
     }
 
-    private Object unwrapReturnValue(Object returnValue) {
-        return ObjectUtils.unwrapOptional(returnValue);
-    }
-
-    private Object wrapCacheValue(Method method, @org.springframework.lang.Nullable Object cacheValue) {
-        if (method.getReturnType() == Optional.class &&
-                (cacheValue == null || cacheValue.getClass() != Optional.class)) {
-            return Optional.ofNullable(cacheValue);
-        }
-        return cacheValue;
-    }
-
-    /**
-     * get key, key  run as null
-     *
-     * @param contexts
-     * @return
-     */
-    private String generateKey(FluxCacheOperationContexts contexts) {
-        String key = contexts.getFluxCacheOperation().getKey();
-        if (ObjectUtils.isEmpty(key)) {
-            return null;
-        }
-        return Objects.requireNonNull(parse(key, contexts.getMethod(), contexts.getArgs())).toString();
-    }
-
-    public static Object parse(String expressionString, Method method, Object[] args) {
-        if (ObjectUtils.isEmpty(expressionString)) {
-            return null;
-        }
-        //获取被拦截方法参数名列表
-        LocalVariableTableParameterNameDiscoverer discoverer = new LocalVariableTableParameterNameDiscoverer();
-        String[] paramNameArr = discoverer.getParameterNames(method);
-        //SPEL解析
-        ExpressionParser parser = new SpelExpressionParser();
-        StandardEvaluationContext context = new StandardEvaluationContext();
-        for (int i = 0; i < Objects.requireNonNull(paramNameArr).length; i++) {
-            context.setVariable(paramNameArr[i], args[i]);
-        }
-        return parser.parseExpression(expressionString).getValue(context);
-    }
-
     private void publish(String cacheName, MonitorEventEnum type, String key, long count, long loadMs, boolean force) {
         cacheMonitor.publishMonitorEvent(
                 FluxCacheMonitorEvent.builder()

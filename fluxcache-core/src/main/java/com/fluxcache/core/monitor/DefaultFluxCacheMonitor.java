@@ -4,7 +4,6 @@ import com.fluxcache.core.config.CacheThreadPoolExecutor;
 import com.fluxcache.core.model.FluxCacheOperation;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import lombok.RequiredArgsConstructor;
-import org.apache.logging.log4j.util.TriConsumer;
 import org.springframework.util.ObjectUtils;
 
 import java.util.HashMap;
@@ -21,7 +20,13 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
 
-    private static final Map<MonitorEventEnum, TriConsumer<FluxCacheStatics, Long, Long>> EVENT_APPLIERS = new HashMap<>();
+    @FunctionalInterface
+    private interface StatApplier {
+
+        void accept(FluxCacheStatics statics, long count, long loadTime);
+    }
+
+    private static final Map<MonitorEventEnum, StatApplier> EVENT_APPLIERS = new HashMap<>();
 
     static {
         EVENT_APPLIERS.put(MonitorEventEnum.CACHE_HIT, FluxCacheStatics::incrementHit);
@@ -63,7 +68,7 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
             statics.init();
         }
 
-        TriConsumer<FluxCacheStatics, Long, Long> applier = EVENT_APPLIERS.get(event.getMonitorEventEnum());
+        StatApplier applier = EVENT_APPLIERS.get(event.getMonitorEventEnum());
         if (Objects.isNull(applier)) {
             return;
         }
