@@ -7,6 +7,7 @@
 - 支持 Caffeine 分布式删除、更新（基于 Redis Pub/Sub）
 - 支持解决缓存雪崩（随机过期时间）
 - 支持缓存穿透（缓存 null）
+- 支持缓存击穿防护（单飞 single-flight：同一 key 并发未命中仅一个线程加载，其余线程复用结果）
 - Dashboard 操作缓存元数据 / 清空 / 按 key 查询与清理
 - Dashboard 缓存命中率等监控统计
 - 纯注解使用

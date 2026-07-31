@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.cache.interceptor.CacheOperationInvoker;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -31,7 +30,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author : wh
@@ -57,6 +58,9 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
 
     private final LocalVariableTableParameterNameDiscoverer nameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
 
+    // 单飞(single-flight)防护：cacheName::key -> 正在进行的加载
+    private final Map<String, CompletableFuture<Object>> singleFlightMap = new ConcurrentHashMap<>();
+
     @Nullable
     @Override
     public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
@@ -72,7 +76,7 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
         };
         try {
             return execute(aopAllianceInvoker, target, method, invocation.getArguments());
-        } catch (CacheOperationInvoker.ThrowableWrapper th) {
+        } catch (FluxCacheOperationInvoker.ThrowableWrapper th) {
             throw th.getOriginal();
         }
     }
@@ -160,6 +164,62 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
             }
         }
 
+        // 单飞防击穿：并发未命中同一 key 时仅一个线程加载，其余等待复用结果
+        if (cacheProperties.isSingleFlightEnable() && key != null) {
+            return loadWithSingleFlight(invoker, cache, key, method, op,
+                    allowCacheNull, allowEmptyOptional, force);
+        }
+        return doLoad(invoker, cache, key, method, op, allowCacheNull, allowEmptyOptional, force);
+    }
+
+    /**
+     * 单飞加载：同一 cacheName + key 的并发未命中仅允许一个线程执行加载，
+     * 其余线程等待其结果后直接返回（类似 JetCache 的 @CachePenetrationProtect）。
+     */
+    private Object loadWithSingleFlight(FluxCacheOperationInvoker invoker,
+                                        FluxCache cache,
+                                        String key,
+                                        Method method,
+                                        FluxCacheOperation op,
+                                        boolean allowCacheNull,
+                                        boolean allowEmptyOptional,
+                                        boolean force) {
+        String flightKey = op.getCacheName() + "::" + key;
+        CompletableFuture<Object> future = new CompletableFuture<>();
+        CompletableFuture<Object> leader = singleFlightMap.putIfAbsent(flightKey, future);
+        if (leader == null) {
+            // 本线程为加载线程，加载完成后唤醒所有等待线程
+            try {
+                Object value = doLoad(invoker, cache, key, method, op, allowCacheNull, allowEmptyOptional, force);
+                future.complete(value);
+                return value;
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
+                throw t;
+            } finally {
+                singleFlightMap.remove(flightKey, future);
+            }
+        }
+        // 等待线程：复用加载线程的结果
+        try {
+            return leader.get(cacheProperties.getSingleFlightTimeoutMillis(), TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            // 加载线程失败或等待超时，回退为自行加载，避免等待线程被无限阻塞
+            if (log.isDebugEnabled()) {
+                log.debug("[FluxCache] single-flight 等待失败 key={} 回退自行加载 ex={}", flightKey, e.toString());
+            }
+            return doLoad(invoker, cache, key, method, op, allowCacheNull, allowEmptyOptional, force);
+        }
+    }
+
+    private Object doLoad(FluxCacheOperationInvoker invoker,
+                          FluxCache cache,
+                          String key,
+                          Method method,
+                          FluxCacheOperation op,
+                          boolean allowCacheNull,
+                          boolean allowEmptyOptional,
+                          boolean force) {
         long begin = System.nanoTime();
 
         // 调用真实方法

@@ -55,6 +55,17 @@ public class FluxCacheProperties {
      */
     private boolean allowCacheEmptyOptional = true;
 
+    /**
+     * 是否开启单飞(single-flight)缓存击穿防护：
+     * 同一 cacheName + key 的并发未命中只允许一个线程执行加载，其余线程等待其结果
+     */
+    private boolean singleFlightEnable = true;
+
+    /**
+     * 单飞等待超时时间(ms)，等待超时后线程回退为自行加载，避免加载线程异常/卡死拖垮所有请求
+     */
+    private long singleFlightTimeoutMillis = 5000L;
+
     @NestedConfigurationProperty
     private FirstCacheConfig firstCache;
 
