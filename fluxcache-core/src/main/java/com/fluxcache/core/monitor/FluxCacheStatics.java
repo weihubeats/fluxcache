@@ -2,7 +2,6 @@ package com.fluxcache.core.monitor;
 
 import lombok.Data;
 
-import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -35,26 +34,9 @@ public class FluxCacheStatics {
 
     public FluxCacheStatics() {
         this.startTime = System.currentTimeMillis();
-        // 初始化首个窗口
         FluxCacheInfo first = FluxCacheInfo.startAt(startTime, HALF_HOUR);
         window.add(first);
         currentBucket.set(first);
-    }
-
-    public boolean isEmpty() {
-        return window.isEmpty();
-    }
-
-    public void init() {
-        if (currentBucket.get() == null) {
-            synchronized (this) {
-                if (currentBucket.get() == null) {
-                    FluxCacheInfo first = FluxCacheInfo.startAt(System.currentTimeMillis(), HALF_HOUR);
-                    window.add(first);
-                    currentBucket.set(first);
-                }
-            }
-        }
     }
 
     /**
@@ -78,7 +60,7 @@ public class FluxCacheStatics {
         rotateIfNeeded();
         FluxCacheInfo b = currentBucket.get();
         if (b != null) {
-            b.getFail().add(count);
+            b.getMiss().add(count);
             b.getRequestCount().add(count);
             b.getMaxLoadTime().accumulateAndGet(loadTime, Math::max);
         }
@@ -111,8 +93,7 @@ public class FluxCacheStatics {
     private void rotateIfNeeded() {
         long now = System.currentTimeMillis();
         FluxCacheInfo last = currentBucket.get();
-        if (Objects.isNull(last)) {
-            init();
+        if (last == null) {
             return;
         }
         // 快路径：仍在当前窗口内

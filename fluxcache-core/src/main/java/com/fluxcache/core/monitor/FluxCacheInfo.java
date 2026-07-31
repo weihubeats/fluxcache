@@ -19,9 +19,9 @@ public class FluxCacheInfo {
     private final LongAdder hit = new LongAdder();
 
     /**
-     * 未命中次数
+     * 缓存未命中次数
      */
-    private final LongAdder fail = new LongAdder();
+    private final LongAdder miss = new LongAdder();
 
     /**
      * 删除次数
@@ -34,7 +34,8 @@ public class FluxCacheInfo {
     private final LongAdder putCount = new LongAdder();
 
     /**
-     * 请求次数（命中 + 未命中）
+     * 读请求总次数（仅累加 HIT + MISS，不包含 PUT/EVICT 等写操作）。
+     * 由 incrementHit / incrementMissing 同步维护。
      */
     private final LongAdder requestCount = new LongAdder();
 

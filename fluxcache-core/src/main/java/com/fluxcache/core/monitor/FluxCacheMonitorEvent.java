@@ -3,8 +3,6 @@ package com.fluxcache.core.monitor;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.Objects;
-
 /**
  * @author : wh
  * @date : 2024/10/6 13:55
@@ -19,14 +17,14 @@ public class FluxCacheMonitorEvent {
     private MonitorEventEnum monitorEventEnum;
 
     /**
-     * 仅对需要真实加载的场景赋值（PUT 场景），单位毫秒 毫秒
+     * 仅对需要真实加载的场景赋值（PUT 场景），单位毫秒
      */
-    private Long loadTime;
+    private long loadTime;
 
     /**
-     * 事件次数，一般为 1，允许批量上报
+     * 事件次数，默认为 1，允许批量上报
      */
-    private Long count;
+    private long count = 1;
 
     /**
      * 事件发生时间（ms）
@@ -38,13 +36,18 @@ public class FluxCacheMonitorEvent {
 
     private boolean forceRefresh;
 
-    public Long count() {
-        return Objects.isNull(count) ? 1L : count;
+    /**
+     * count 的安全取值，默认 1。
+     */
+    public long getCount() {
+        return count;
     }
 
-    public Long loadTime() {
-        return Objects.isNull(loadTime) ? 0L : loadTime;
+    /**
+     * loadTime 的安全取值，默认 0。
+     */
+    public long getLoadTime() {
+        return loadTime;
     }
-
-
 }
+

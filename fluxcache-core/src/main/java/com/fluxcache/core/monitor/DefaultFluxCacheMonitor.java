@@ -4,6 +4,8 @@ import com.fluxcache.core.config.CacheThreadPoolExecutor;
 import com.fluxcache.core.model.FluxCacheOperation;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.ObjectUtils;
 
 import java.util.HashMap;
@@ -19,6 +21,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 @RequiredArgsConstructor
 public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultFluxCacheMonitor.class);
 
     @FunctionalInterface
     private interface StatApplier {
@@ -64,16 +68,13 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
         }
         FluxCacheStatics statics = cacheStaticsMap.computeIfAbsent(event.getCacheName(), k -> new FluxCacheStatics());
 
-        if (statics.isEmpty()) {
-            statics.init();
-        }
-
         StatApplier applier = EVENT_APPLIERS.get(event.getMonitorEventEnum());
         if (Objects.isNull(applier)) {
+            log.warn("未注册的监控事件类型: cache={}, type={}", event.getCacheName(), event.getMonitorEventEnum());
             return;
         }
 
-        Runnable task = () -> applier.accept(statics, event.count(), event.loadTime());
+        Runnable task = () -> applier.accept(statics, event.getCount(), event.getLoadTime());
 
         if (cacheProperties.isAsyncMonitorEnable()) {
             cacheThreadPoolExecutor.execute(task);

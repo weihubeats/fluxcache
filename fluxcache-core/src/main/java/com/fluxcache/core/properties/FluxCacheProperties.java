@@ -78,6 +78,43 @@ public class FluxCacheProperties {
     @NestedConfigurationProperty
     private RedisCacheConfig redis = new RedisCacheConfig();
 
+    /**
+     * 监控统计相关配置
+     */
+    @NestedConfigurationProperty
+    private MonitoringConfig monitoring = new MonitoringConfig();
+
+    /**
+     * 监控统计配置
+     */
+    @Data
+    public static class MonitoringConfig {
+        /**
+         * 滚动窗口长度（分钟）
+         */
+        private int windowMinutes = 30;
+
+        /**
+         * 最多保留窗口数
+         */
+        private int maxWindows = 48;
+
+        /**
+         * 异步监控线程池核心线程数
+         */
+        private int monitorCorePoolSize = 1;
+
+        /**
+         * 异步监控线程池最大线程数
+         */
+        private int monitorMaxPoolSize = 3;
+
+        /**
+         * 异步监控线程池队列容量
+         */
+        private int monitorQueueSize = 2000;
+    }
+
     @Data
     public static class FirstCacheConfig extends CacheConfig {
 

@@ -33,11 +33,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-import java.util.concurrent.ThreadPoolExecutor;
-
-import static com.fluxcache.core.constants.ThreadPoolConstant.DEFAULT_CORE_POOL_SIZE;
-import static com.fluxcache.core.constants.ThreadPoolConstant.DEFAULT_MAXIMUM_POOL_SIZE;
-import static com.fluxcache.core.constants.ThreadPoolConstant.DEFAULT_QUEUE_SIZE;
+import java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy;
 
 /**
  * @author : wh
@@ -94,9 +90,11 @@ public class FluxProxyCacheAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(CacheThreadPoolExecutor.class)
-    public CacheThreadPoolExecutor cacheThreadPoolExecutor() {
-        return new CacheThreadPoolExecutor(DEFAULT_CORE_POOL_SIZE, DEFAULT_MAXIMUM_POOL_SIZE, DEFAULT_QUEUE_SIZE, ThreadPoolConstant.DEFAULT_KEEP_ALIVE_TIME
-            , ThreadPoolConstant.DEFAULT_THREAD_NAME_PREFIX, new ThreadPoolExecutor.DiscardPolicy());
+    public CacheThreadPoolExecutor cacheThreadPoolExecutor(FluxCacheProperties cacheProperties) {
+        FluxCacheProperties.MonitoringConfig mon = cacheProperties.getMonitoring();
+        return new CacheThreadPoolExecutor(mon.getMonitorCorePoolSize(), mon.getMonitorMaxPoolSize(),
+            mon.getMonitorQueueSize(), ThreadPoolConstant.DEFAULT_KEEP_ALIVE_TIME,
+            ThreadPoolConstant.DEFAULT_THREAD_NAME_PREFIX, new DiscardOldestPolicy());
     }
 
     @Bean

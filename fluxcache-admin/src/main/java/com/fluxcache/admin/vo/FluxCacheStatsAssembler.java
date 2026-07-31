@@ -33,7 +33,7 @@ public class FluxCacheStatsAssembler {
         List<FluxCacheInfo> snapshot = snapshot(statics);
         // 只保留最后 N 个窗口
         if (lastNWindows > 0 && snapshot.size() > lastNWindows) {
-            snapshot = snapshot.subList(snapshot.size() - lastNWindows, snapshot.size());
+            snapshot = new ArrayList<>(snapshot.subList(snapshot.size() - lastNWindows, snapshot.size()));
         }
         fill(out, cacheName, statics.getStartTime(), snapshot);
     }
@@ -61,10 +61,10 @@ public class FluxCacheStatsAssembler {
 
         for (FluxCacheInfo info : buckets) {
             long hit = info.getHit().sum();
-            long miss = info.getFail().sum();
+            long miss = info.getMiss().sum();
             long put = info.getPutCount().sum();
             long evict = info.getEvictCount().sum();
-            long req = info.getRequestCount().sum();
+            long req = hit + miss;
             long maxLoad = info.getMaxLoadTime().get();
 
             long start = info.getStartTime().get();
