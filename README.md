@@ -12,6 +12,14 @@
 - 纯注解使用
 - **多 Redis 客户端**：默认 Spring Data Redis；Redisson 可选独立模块（含 `REDIS_MAP` / RMapCache）
 
+## 页面
+
+![cache-overview.png](docs/images/cache-overview.png)
+
+![service-manage .png](docs/images/service-manage%20.png)
+
+![cache-detail.png](docs/images/cache-detail.png)
+
 ## 模块
 
 | 模块 | 说明 |
@@ -151,4 +159,4 @@ public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
 
 ## Dashboard
 
-引入 starter（含 admin）后访问管理端能力；前端见 `fluxcache-dashboard`。
+引入 starter（含 admin）后访问管理端能力；前端见 `fluxcache-dashboard`

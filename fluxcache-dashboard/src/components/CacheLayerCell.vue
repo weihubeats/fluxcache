@@ -8,20 +8,15 @@ const props = defineProps<{
 }>()
 
 const layer = computed(() => parseCacheLayer(props.config))
-
-const typeColor = computed(() => {
-  if (layer.value.kind === 'caffeine') return 'purple'
-  if (layer.value.kind === 'redis') return 'volcano'
-  if (layer.value.kind === 'none') return undefined
-  return 'default'
-})
 </script>
 
 <template>
-  <div v-if="layer.kind === 'none'" class="none-text">未配置</div>
+  <div v-if="layer.kind === 'none'" class="empty"><span class="dash"></span>未配置</div>
   <div v-else class="layer-cell">
-    <a-tag :color="typeColor" class="type-tag">{{ layer.typeLabel }}</a-tag>
-    <span v-if="layer.ttlLabel" class="meta">TTL {{ layer.ttlLabel }}</span>
+    <span class="type-tag" :class="layer.kind">
+      <span class="sq"></span>{{ layer.typeLabel }}
+    </span>
+    <span class="meta">TTL <b>{{ layer.ttlLabel }}</b></span>
     <span v-if="layer.maxSizeLabel" class="meta dim">{{ layer.maxSizeLabel }}</span>
   </div>
 </template>
@@ -29,25 +24,82 @@ const typeColor = computed(() => {
 <style scoped>
 .layer-cell {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.type-tag .sq {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+
+.type-tag.caffeine {
+  color: #c3b6ff;
+  background: var(--violet-d);
+}
+.type-tag.caffeine .sq {
+  background: var(--violet);
+}
+
+.type-tag.redis {
+  color: #ff9a8b;
+  background: rgba(255, 107, 107, 0.12);
+}
+.type-tag.redis .sq {
+  background: var(--red);
+}
+
+.type-tag.other {
+  color: var(--amber);
+  background: var(--amber-d);
+}
+.type-tag.other .sq {
+  background: var(--amber);
+}
+
+.meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.meta b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.meta.dim {
+  color: var(--text-faint);
+}
+
+.empty {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  display: flex;
   align-items: center;
   gap: 6px;
 }
-.type-tag {
-  margin: 0;
-  border-radius: 6px;
-  font-weight: 500;
-}
-.meta {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-  white-space: nowrap;
-}
-.meta.dim {
-  color: rgba(0, 0, 0, 0.35);
-}
-.none-text {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.35);
+
+.empty .dash {
+  width: 14px;
+  height: 1px;
+  background: var(--line-3);
+  display: inline-block;
 }
 </style>

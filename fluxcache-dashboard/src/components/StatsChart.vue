@@ -29,18 +29,56 @@ const props = defineProps<{
   type: 'hitRate' | 'request' | 'maxLoad'
 }>()
 
+const AXIS = '#5e6c87'
+const SPLIT = 'rgba(255,255,255,0.06)'
+const TEAL = '#33d8c2'
+const AMBER = '#f4b13e'
+const ROSE = '#ff6b6b'
+const TEXT = '#9aa7c0'
+
 const categories = computed(() => props.windows.map((w) => formatTime(w.startTime)))
 
-const option = computed<EChartsOption>(() => {
-  const base: EChartsOption = {
-    grid: { left: 48, right: 24, top: 40, bottom: 48 },
-    tooltip: { trigger: 'axis' },
-    legend: { top: 0 },
-    dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18 }],
-    xAxis: { type: 'category', data: categories.value, boundaryGap: props.type !== 'hitRate' },
-    yAxis: { type: 'value', scale: true },
-  }
+const base: EChartsOption = {
+  backgroundColor: 'transparent',
+  grid: { left: 48, right: 24, top: 40, bottom: 48 },
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: 'rgba(13,18,28,0.95)',
+    borderColor: 'rgba(255,255,255,0.1)',
+    textStyle: { color: '#eaf0fb' },
+  },
+  legend: {
+    top: 0,
+    textStyle: { color: TEXT, fontFamily: 'JetBrains Mono', fontSize: 11 },
+  },
+  dataZoom: [
+    {
+      type: 'inside',
+      borderColor: 'transparent',
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      fillerColor: 'rgba(51,216,194,0.08)',
+      handleStyle: { color: '#5e6c87' },
+      textStyle: { color: AXIS },
+    },
+    { type: 'slider', height: 18, borderColor: 'transparent' },
+  ],
+  xAxis: {
+    type: 'category',
+    data: categories.value,
+    boundaryGap: props.type !== 'hitRate',
+    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
+    axisLabel: { color: AXIS, fontFamily: 'JetBrains Mono', fontSize: 10.5 },
+    axisTick: { show: false },
+  },
+  yAxis: {
+    type: 'value',
+    scale: true,
+    axisLabel: { color: AXIS, fontFamily: 'JetBrains Mono', fontSize: 10.5 },
+    splitLine: { lineStyle: { color: SPLIT } },
+  },
+}
 
+const option = computed<EChartsOption>(() => {
   if (props.type === 'hitRate') {
     return {
       ...base,
@@ -48,7 +86,13 @@ const option = computed<EChartsOption>(() => {
         type: 'value',
         min: 0,
         max: 1,
-        axisLabel: { formatter: (v: number) => formatHitRate(v) },
+        axisLabel: {
+          color: AXIS,
+          formatter: (v: number) => formatHitRate(v),
+          fontFamily: 'JetBrains Mono',
+          fontSize: 10.5,
+        },
+        splitLine: { lineStyle: { color: SPLIT } },
       },
       series: [
         {
@@ -57,11 +101,28 @@ const option = computed<EChartsOption>(() => {
           smooth: true,
           showSymbol: false,
           data: props.windows.map((w) => w.hitRate),
-          areaStyle: { opacity: 0.08 },
+          lineStyle: { color: TEAL, width: 2.5 },
+          itemStyle: { color: TEAL },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(51,216,194,0.22)' },
+                { offset: 1, color: 'rgba(51,216,194,0)' },
+              ],
+            },
+          },
         },
       ],
       tooltip: {
         trigger: 'axis',
+        backgroundColor: 'rgba(13,18,28,0.95)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        textStyle: { color: '#eaf0fb' },
         valueFormatter: (v) => formatHitRate(Number(v)),
       },
     }
@@ -76,19 +137,38 @@ const option = computed<EChartsOption>(() => {
           type: 'bar',
           stack: 'req',
           data: props.windows.map((w) => w.requestCount),
-          itemStyle: { color: '#1677ff' },
+          itemStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(90,169,240,0.85)' },
+                { offset: 1, color: 'rgba(90,169,240,0.25)' },
+              ],
+            },
+            borderRadius: [3, 3, 0, 0],
+          },
         },
         {
           name: '命中',
           type: 'line',
+          smooth: true,
+          showSymbol: false,
           data: props.windows.map((w) => w.hit),
-          itemStyle: { color: '#52c41a' },
+          lineStyle: { color: TEAL, width: 2.5 },
+          itemStyle: { color: TEAL },
         },
         {
           name: '未命中',
           type: 'line',
+          smooth: true,
+          showSymbol: false,
           data: props.windows.map((w) => w.miss),
-          itemStyle: { color: '#ff4d4f' },
+          lineStyle: { color: ROSE, width: 2.5 },
+          itemStyle: { color: ROSE },
         },
       ],
     }
@@ -98,7 +178,13 @@ const option = computed<EChartsOption>(() => {
     ...base,
     yAxis: {
       type: 'value',
-      axisLabel: { formatter: (v: number) => `${v} ms` },
+      axisLabel: {
+        color: AXIS,
+        formatter: (v: number) => `${v} ms`,
+        fontFamily: 'JetBrains Mono',
+        fontSize: 10.5,
+      },
+      splitLine: { lineStyle: { color: SPLIT } },
     },
     series: [
       {
@@ -107,12 +193,28 @@ const option = computed<EChartsOption>(() => {
         smooth: true,
         showSymbol: false,
         data: props.windows.map((w) => w.maxLoadTime),
-        areaStyle: { opacity: 0.08 },
-        itemStyle: { color: '#fa8c16' },
+        lineStyle: { color: AMBER, width: 2.5 },
+        itemStyle: { color: AMBER },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(244,177,62,0.18)' },
+              { offset: 1, color: 'rgba(244,177,62,0)' },
+            ],
+          },
+        },
       },
     ],
     tooltip: {
       trigger: 'axis',
+      backgroundColor: 'rgba(13,18,28,0.95)',
+      borderColor: 'rgba(255,255,255,0.1)',
+      textStyle: { color: '#eaf0fb' },
       valueFormatter: (v) => `${v} ms`,
     },
   }
@@ -141,7 +243,7 @@ watch(
 <style scoped>
 .chart-wrap {
   width: 100%;
-  height: 320px;
+  height: 300px;
 }
 .chart {
   width: 100%;

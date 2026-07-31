@@ -18,13 +18,13 @@ const display = computed(() => shortMethodName(props.methodName))
 <style scoped>
 .method-chip {
   display: inline-block;
-  max-width: 220px;
+  max-width: 230px;
   padding: 2px 8px;
-  border-radius: 6px;
-  background: #f5f7fa;
-  border: 1px solid #eef0f3;
-  color: #262626;
-  font-size: 12px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 11.5px;
   line-height: 1.6;
   overflow: hidden;
   text-overflow: ellipsis;

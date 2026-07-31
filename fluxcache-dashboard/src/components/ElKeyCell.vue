@@ -22,19 +22,21 @@ const text = computed(() => {
 <style scoped>
 .el-chip {
   display: inline-block;
-  max-width: 160px;
+  max-width: 150px;
   padding: 1px 7px;
-  border-radius: 4px;
-  background: #f5f5f5;
-  color: #595959;
-  font-size: 12px;
+  border-radius: 5px;
+  background: rgba(157, 140, 255, 0.08);
+  border: 1px solid rgba(157, 140, 255, 0.18);
+  color: #c3b6ff;
+  font-size: 11.5px;
   line-height: 1.6;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
 }
+
 .none-text {
-  color: rgba(0, 0, 0, 0.25);
+  color: rgba(234, 240, 251, 0.25);
 }
 </style>

@@ -24,12 +24,12 @@ const form = reactive({
 })
 
 const columns: TableColumnsType = [
-  { title: '服务名', dataIndex: 'name', key: 'name', width: 160 },
+  { title: '服务名', dataIndex: 'name', key: 'name', width: 150 },
   { title: 'Base URL', dataIndex: 'baseUrl', key: 'baseUrl', ellipsis: true },
-  { title: 'Prefix', dataIndex: 'prefix', key: 'prefix', width: 180 },
-  { title: '启用', key: 'enabled', width: 80 },
-  { title: '状态', key: 'status', width: 160 },
-  { title: '操作', key: 'action', width: 260 },
+  { title: 'Prefix', dataIndex: 'prefix', key: 'prefix', width: 170 },
+  { title: '启用', key: 'enabled', width: 70 },
+  { title: '状态', key: 'status', width: 190 },
+  { title: '操作', key: 'action', width: 240 },
 ]
 
 const rows = computed(() => store.services)
@@ -142,21 +142,25 @@ function toggleEnabled(svc: ServiceEndpoint, checked: boolean) {
 </script>
 
 <template>
-  <div class="page-card">
-    <div class="toolbar">
+  <div class="page-card content-view">
+    <div class="pagehead">
       <div>
-        <a-typography-title :level="4" style="margin-top: 0; margin-bottom: 4px">
-          服务管理
-        </a-typography-title>
-        <a-typography-paragraph type="secondary" style="margin-bottom: 0">
+        <h1 class="ttl"><span class="accent"></span>服务管理</h1>
+        <div class="sub">
           为每个接入 FluxCache 的业务实例配置独立入口，例如
-          <code>pay-service</code>、<code>order-service</code>。总览页会聚合所有启用服务的缓存。
-        </a-typography-paragraph>
+          <span>pay-service</span>、<span>order-service</span>。总览页会聚合所有启用服务的缓存。
+        </div>
       </div>
-      <a-space>
-        <a-button :loading="testingAll" @click="testAll">全部探测</a-button>
-        <a-button type="primary" @click="openCreate">添加服务</a-button>
-      </a-space>
+      <div class="head-actions">
+        <button class="btn" :class="{ spin: testingAll }" :disabled="testingAll" @click="testAll">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          全部探测
+        </button>
+        <button class="btn primary" @click="openCreate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+          添加服务
+        </button>
+      </div>
     </div>
 
     <a-table
@@ -178,15 +182,11 @@ function toggleEnabled(svc: ServiceEndpoint, checked: boolean) {
         </template>
         <template v-else-if="column.key === 'status'">
           <a-space direction="vertical" :size="0">
-            <a-tag
-              :color="
-                store.getRuntime((record as ServiceEndpoint).id).status === 'online'
-                  ? 'success'
-                  : store.getRuntime((record as ServiceEndpoint).id).status === 'offline'
-                    ? 'error'
-                    : 'default'
-              "
+            <span
+              class="status"
+              :class="store.getRuntime((record as ServiceEndpoint).id).status"
             >
+              <span class="d"></span>
               {{
                 store.getRuntime((record as ServiceEndpoint).id).status === 'online'
                   ? '在线'
@@ -194,7 +194,7 @@ function toggleEnabled(svc: ServiceEndpoint, checked: boolean) {
                     ? '离线'
                     : '未探测'
               }}
-            </a-tag>
+            </span>
             <a-typography-text
               v-if="store.getRuntime((record as ServiceEndpoint).id).namespace"
               type="secondary"
@@ -266,12 +266,150 @@ function toggleEnabled(svc: ServiceEndpoint, checked: boolean) {
 </template>
 
 <style scoped>
-.toolbar {
+.pagehead {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 20px;
   flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.ttl {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(26px, 3vw, 34px);
+  letter-spacing: -0.5px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  color: var(--text);
+}
+
+.ttl .accent {
+  width: 8px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, var(--teal), var(--sky));
+}
+
+.sub {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  margin-top: 9px;
+  font-family: var(--mono);
+  letter-spacing: 0.2px;
+  max-width: 680px;
+}
+
+.sub span {
+  color: var(--teal);
+}
+
+.head-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--line-3);
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  color: #04110f;
+  background: linear-gradient(135deg, var(--teal), #6fe9d4);
+  border-color: transparent;
+  box-shadow: 0 10px 24px -12px rgba(51, 216, 194, 0.8);
+}
+
+.btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn.spin svg {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.status .d {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.status.online {
+  color: var(--teal);
+}
+
+.status.online .d {
+  background: var(--teal);
+  animation: pulse 2.2s infinite;
+}
+
+.status.offline {
+  color: var(--rose);
+}
+
+.status.offline .d {
+  background: var(--rose);
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(51, 216, 194, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(51, 216, 194, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(51, 216, 194, 0);
+  }
 }
 </style>

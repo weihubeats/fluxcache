@@ -64,16 +64,19 @@ onUnmounted(clearTimer)
 </script>
 
 <template>
-  <div>
-    <div class="page-card" style="margin-bottom: 16px">
+  <div class="detail content-view">
+    <div class="page-card head-card">
       <div class="toolbar">
         <a-space wrap>
-          <a-button @click="router.push({ name: 'caches' })">返回列表</a-button>
-          <a-tag color="blue">{{ service?.name || serviceId }}</a-tag>
-          <a-typography-title :level="4" style="margin: 0">{{ cacheName }}</a-typography-title>
-          <a-typography-text v-if="stats?.startTime" type="secondary">
+          <button class="btn ghost" @click="router.push({ name: 'caches' })">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            返回列表
+          </button>
+          <span class="tag svc">{{ service?.name || serviceId }}</span>
+          <h1 class="ttl">{{ cacheName }}</h1>
+          <span v-if="stats?.startTime" class="text-faint mono">
             监控起始 {{ formatTime(stats.startTime) }}
-          </a-typography-text>
+          </span>
         </a-space>
         <a-space>
           <a-switch
@@ -81,10 +84,11 @@ onUnmounted(clearTimer)
             checked-children="自动刷新"
             un-checked-children="手动"
           />
-          <a-button :disabled="!service" @click="opsOpen = true">Key 运维</a-button>
-          <a-button type="primary" :loading="loading" :disabled="!service" @click="load">
+          <button class="btn ghost" :disabled="!service" @click="opsOpen = true">Key 运维</button>
+          <button class="btn primary" :disabled="!service" :class="{ spin: loading }" @click="load">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
             刷新
-          </a-button>
+          </button>
         </a-space>
       </div>
       <a-alert
@@ -103,26 +107,26 @@ onUnmounted(clearTimer)
           <StatsKpiCards :stats="stats" />
         </div>
 
-        <a-row :gutter="[16, 16]">
-          <a-col :xs="24" :lg="24">
-            <div class="page-card">
-              <a-typography-title :level="5">命中率</a-typography-title>
-              <StatsChart type="hitRate" :windows="stats.windows || []" />
+        <div class="chart-grid">
+          <div class="page-card chart-card">
+            <div class="chart-title">
+              <span class="dot teal"></span>命中率
             </div>
-          </a-col>
-          <a-col :xs="24" :lg="12">
-            <div class="page-card">
-              <a-typography-title :level="5">请求量</a-typography-title>
-              <StatsChart type="request" :windows="stats.windows || []" />
+            <StatsChart type="hitRate" :windows="stats.windows || []" />
+          </div>
+          <div class="page-card chart-card">
+            <div class="chart-title">
+              <span class="dot amber"></span>请求量
             </div>
-          </a-col>
-          <a-col :xs="24" :lg="12">
-            <div class="page-card">
-              <a-typography-title :level="5">最大加载耗时</a-typography-title>
-              <StatsChart type="maxLoad" :windows="stats.windows || []" />
+            <StatsChart type="request" :windows="stats.windows || []" />
+          </div>
+          <div class="page-card chart-card">
+            <div class="chart-title">
+              <span class="dot sky"></span>最大加载耗时
             </div>
-          </a-col>
-        </a-row>
+            <StatsChart type="maxLoad" :windows="stats.windows || []" />
+          </div>
+        </div>
       </template>
       <a-empty v-else description="暂无统计数据" />
     </a-spin>
@@ -143,5 +147,135 @@ onUnmounted(clearTimer)
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.head-card {
+  margin-bottom: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.btn:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--line-3);
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  color: #04110f;
+  background: linear-gradient(135deg, var(--teal), #6fe9d4);
+  border-color: transparent;
+  box-shadow: 0 10px 24px -12px rgba(51, 216, 194, 0.8);
+}
+
+.btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn.primary.spin svg {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tag.svc {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 30px;
+  border: 1px solid rgba(90, 169, 240, 0.3);
+  color: var(--sky);
+  background: rgba(90, 169, 240, 0.1);
+  white-space: nowrap;
+}
+
+.ttl {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  margin: 0;
+  color: var(--text);
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.chart-card {
+  min-width: 0;
+}
+
+.chart-card:first-child {
+  grid-column: span 2;
+}
+
+.chart-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.chart-title .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chart-title .dot.teal {
+  background: var(--teal);
+}
+.chart-title .dot.amber {
+  background: var(--amber);
+}
+.chart-title .dot.sky {
+  background: var(--sky);
+}
+
+@media (max-width: 900px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+  .chart-card:first-child {
+    grid-column: span 1;
+  }
 }
 </style>
