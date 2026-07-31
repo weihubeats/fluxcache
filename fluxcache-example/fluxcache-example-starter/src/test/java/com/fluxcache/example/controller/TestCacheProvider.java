@@ -3,11 +3,11 @@ package com.fluxcache.example.controller;
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;
 import com.fluxcache.example.FluxCacheApplication;
-import com.fluxcache.example.config.ManuallyRefreshCache;
-import com.fluxcache.example.config.MyFluxCacheDataRegistered;
-import com.fluxcache.example.service.StudentMultipleKeysProvider;
-import com.fluxcache.example.service.StudentProviderService;
-import com.fluxcache.example.vo.StudentVO;
+import com.fluxcache.example.config.OrderManuallyRefreshCache;
+import com.fluxcache.example.config.OrderMyFluxCacheDataRegistered;
+import com.fluxcache.example.service.OrderMultipleKeysProvider;
+import com.fluxcache.example.service.OrderProviderService;
+import com.fluxcache.example.vo.OrderVO;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -45,44 +45,44 @@ public class TestCacheProvider {
     }
 
     @Autowired
-    private StudentProviderService studentProviderService;
+    private OrderProviderService orderProviderService;
 
     @Autowired
     private FluxCacheManager cacheManager;
 
     @Test
     public void testRefreshCacheByNoParam() throws Exception {
-        List<StudentVO> vos = studentProviderService.testRefreshCache();
-        List<StudentVO> vos1 = studentProviderService.testRefreshCache();
+        List<OrderVO> vos = orderProviderService.testRefreshCache();
+        List<OrderVO> vos1 = orderProviderService.testRefreshCache();
         Assertions.assertEquals(vos, vos1);
 
         TimeUnit.SECONDS.sleep(4);
-        List<StudentVO> newVos = studentProviderService.testRefreshCache();
+        List<OrderVO> newVos = orderProviderService.testRefreshCache();
         Assertions.assertNotEquals(vos, newVos);
     }
 
     @Test
     public void testRefreshCacheByOneParam() throws Exception {
-        String key = StudentMultipleKeysProvider.KEY;
-        List<StudentVO> vos = studentProviderService.refreshCacheByOneParam(key);
-        List<StudentVO> vos1 = studentProviderService.refreshCacheByOneParam(key);
+        String key = OrderMultipleKeysProvider.KEY;
+        List<OrderVO> vos = orderProviderService.refreshCacheByOneParam(key);
+        List<OrderVO> vos1 = orderProviderService.refreshCacheByOneParam(key);
         Assertions.assertEquals(vos, vos1);
 
         TimeUnit.SECONDS.sleep(4);
-        List<StudentVO> newVos = studentProviderService.refreshCacheByOneParam(key);
+        List<OrderVO> newVos = orderProviderService.refreshCacheByOneParam(key);
         Assertions.assertNotEquals(vos, newVos);
     }
 
     @Test
     public void RefreshCacheByManually() throws Exception {
-        FluxCache<String, List<StudentVO>> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
+        FluxCache<String, List<OrderVO>> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
 
-        List<StudentVO> vos = cache.get(ManuallyRefreshCache.KEY).get();
-        List<StudentVO> vos1 = cache.get(ManuallyRefreshCache.KEY).get();
+        List<OrderVO> vos = cache.get(OrderManuallyRefreshCache.KEY).get();
+        List<OrderVO> vos1 = cache.get(OrderManuallyRefreshCache.KEY).get();
         Assertions.assertEquals(vos, vos1);
         TimeUnit.SECONDS.sleep(4);
 
-        List<StudentVO> newVos = cache.get(ManuallyRefreshCache.KEY).get();
+        List<OrderVO> newVos = cache.get(OrderManuallyRefreshCache.KEY).get();
         Assertions.assertNotEquals(vos, newVos);
 
 

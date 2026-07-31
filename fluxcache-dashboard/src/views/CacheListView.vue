@@ -263,7 +263,10 @@ onMounted(load)
     <!-- table panel -->
     <section class="panel">
       <div class="toolbar">
-        <h3>缓存明细</h3>
+        <h3>
+          <svg class="panel-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+          缓存明细
+        </h3>
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <input v-model="searchText" type="text" placeholder="搜索缓存名 / Method / Key…" />
@@ -529,11 +532,20 @@ onMounted(load)
 }
 
 .toolbar h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--display);
   font-weight: 700;
   font-size: 16px;
   margin: 0 4px 0 0;
   color: var(--text);
+}
+
+.toolbar h3 .panel-ico {
+  width: 17px;
+  height: 17px;
+  color: var(--accent);
 }
 
 .search {

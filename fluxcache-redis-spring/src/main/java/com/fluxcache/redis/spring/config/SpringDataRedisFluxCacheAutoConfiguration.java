@@ -14,6 +14,7 @@ import com.fluxcache.redis.spring.sync.RedisTemplateLocalCacheEvictListener;
 import com.fluxcache.redis.spring.sync.RedisTemplateLocalCachePutListener;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
@@ -56,6 +57,8 @@ public class SpringDataRedisFluxCacheAutoConfiguration {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
         RedisSerializer<Object> valueSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         template.setKeySerializer(keySerializer);
         template.setHashKeySerializer(keySerializer);

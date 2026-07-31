@@ -4,8 +4,8 @@ import com.fluxcache.core.DefaultFluxCacheManager;
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.impl.FluxMultiLevelCache;
 import com.fluxcache.example.FluxCacheApplication;
-import com.fluxcache.example.config.MyFluxCacheDataRegistered;
-import com.fluxcache.example.vo.StudentVO;
+import com.fluxcache.example.config.OrderMyFluxCacheDataRegistered;
+import com.fluxcache.example.vo.OrderVO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class FluxCacheBehaviorTest {
     }
 
     @Autowired
-    private TestController testController;
+    private TestOrderController testOrderController;
 
     @Autowired
     private DefaultFluxCacheManager cacheManager;
@@ -58,9 +58,9 @@ class FluxCacheBehaviorTest {
         return prefix + "-" + UUID.randomUUID();
     }
 
-    private static int firstAge(List<StudentVO> vos) {
+    private static int firstAmount(List<OrderVO> vos) {
         assertThat(vos).isNotEmpty();
-        return vos.get(0).getAge();
+        return vos.get(0).getOrderAmount();
     }
 
     private <T> void assertHit(Function<String, T> loader, String key) {
@@ -77,11 +77,11 @@ class FluxCacheBehaviorTest {
         await().pollDelay(500, TimeUnit.MILLISECONDS).atMost(3, TimeUnit.SECONDS).until(() -> true);
     }
 
-    private void awaitCachedAge(String cacheName, String key, int expectedAge) {
+    private void awaitCachedAmount(String cacheName, String key, int expectedAmount) {
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
             FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache(cacheName).get(key);
             assertThat(wrapper).isNotNull();
-            assertThat(firstAge((List<StudentVO>) wrapper.get())).isEqualTo(expectedAge);
+            assertThat(firstAmount((List<OrderVO>) wrapper.get())).isEqualTo(expectedAmount);
         });
     }
 
@@ -95,19 +95,19 @@ class FluxCacheBehaviorTest {
             String keyA = uniqueKey("caf");
             String keyB = uniqueKey("caf");
 
-            int ageA = firstAge(testController.firstCacheByCaffeine(keyA));
-            assertThat(firstAge(testController.firstCacheByCaffeine(keyA))).isEqualTo(ageA);
-            assertThat(firstAge(testController.firstCacheByCaffeine(keyB))).isNotEqualTo(ageA);
+            int ageA = firstAmount(testOrderController.firstCacheByCaffeine(keyA));
+            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyA))).isEqualTo(ageA);
+            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyB))).isNotEqualTo(ageA);
         }
 
         @Test
         @DisplayName("allowCacheNull=true 时缓存 null")
         void allowNull_cachesNullValue() {
             String key = uniqueKey("caf-null");
-            assertThat(testController.mockSelectSqlToNullByFirstCache(key)).isNull();
-            assertThat(testController.mockSelectSqlToNullByFirstCache(key)).isNull();
+            assertThat(testOrderController.mockSelectSqlToNullByFirstCache(key)).isNull();
+            assertThat(testOrderController.mockSelectSqlToNullByFirstCache(key)).isNull();
 
-            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("testNullFirstCache").get(key);
+            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("orderTestNullFirstCache").get(key);
             assertThat(wrapper).isNotNull();
             assertThat(wrapper.get()).isNull();
         }
@@ -116,30 +116,30 @@ class FluxCacheBehaviorTest {
         @DisplayName("allowCacheNull=false 时不缓存 null")
         void disallowNull_doesNotCacheNullValue() {
             String key = uniqueKey("caf-no-null");
-            assertThat(testController.mockSelectSqlToNoNullByFirstCache(key)).isNull();
+            assertThat(testOrderController.mockSelectSqlToNoNullByFirstCache(key)).isNull();
 
-            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("testNoNullFirstCache").get(key);
+            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("orderTestNoNullFirstCache").get(key);
             assertThat(wrapper).isNull();
 
-            assertThat(testController.mockSelectSqlToNoNullByFirstCache(key)).isNull();
-            assertThat(cacheManager.getCache("testNoNullFirstCache").get(key)).isNull();
+            assertThat(testOrderController.mockSelectSqlToNoNullByFirstCache(key)).isNull();
+            assertThat(cacheManager.getCache("orderTestNoNullFirstCache").get(key)).isNull();
         }
 
         @Test
         @DisplayName("Optional 返回值可缓存，evict 后重新加载")
         void optionalValue_cacheAndEvict() {
             String key = uniqueKey("caf-opt");
-            Optional<List<StudentVO>> first = testController.firstCacheByCaffeineAndOptional(key);
-            assertThat(testController.firstCacheByCaffeineAndOptional(key)).isEqualTo(first);
+            Optional<List<OrderVO>> first = testOrderController.firstCacheByCaffeineAndOptional(key);
+            assertThat(testOrderController.firstCacheByCaffeineAndOptional(key)).isEqualTo(first);
 
-            testController.clearFirstCacheByCaffeineAndOptional(key);
+            testOrderController.clearFirstCacheByCaffeineAndOptional(key);
             awaitCacheSyncSettled();
 
-            Optional<List<StudentVO>> reloaded = testController.firstCacheByCaffeineAndOptional(key);
+            Optional<List<OrderVO>> reloaded = testOrderController.firstCacheByCaffeineAndOptional(key);
             assertThat(reloaded).isPresent();
-            assertThat(firstAge(reloaded.get())).isNotEqualTo(firstAge(first.orElseThrow()));
-            assertThat(firstAge(testController.firstCacheByCaffeineAndOptional(key).orElseThrow()))
-                    .isEqualTo(firstAge(reloaded.get()));
+            assertThat(firstAmount(reloaded.get())).isNotEqualTo(firstAmount(first.orElseThrow()));
+            assertThat(firstAmount(testOrderController.firstCacheByCaffeineAndOptional(key).orElseThrow()))
+                    .isEqualTo(firstAmount(reloaded.get()));
         }
 
         @Test
@@ -148,16 +148,16 @@ class FluxCacheBehaviorTest {
             String keyA = uniqueKey("caf-evict");
             String keyB = uniqueKey("caf-evict");
 
-            int ageA = firstAge(testController.firstCacheByCaffeine(keyA));
-            int ageB = firstAge(testController.firstCacheByCaffeine(keyB));
+            int ageA = firstAmount(testOrderController.firstCacheByCaffeine(keyA));
+            int ageB = firstAmount(testOrderController.firstCacheByCaffeine(keyB));
 
-            testController.clearFirstCacheByCaffeineByKey(keyA);
+            testOrderController.clearFirstCacheByCaffeineByKey(keyA);
             awaitCacheSyncSettled();
 
-            int reloadedA = firstAge(testController.firstCacheByCaffeine(keyA));
+            int reloadedA = firstAmount(testOrderController.firstCacheByCaffeine(keyA));
             assertThat(reloadedA).isNotEqualTo(ageA);
-            awaitCachedAge("firstCacheByCaffeine", keyA, reloadedA);
-            assertThat(firstAge(testController.firstCacheByCaffeine(keyB))).isEqualTo(ageB);
+            awaitCachedAmount("orderCacheByCaffeine", keyA, reloadedA);
+            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyB))).isEqualTo(ageB);
         }
 
         @Test
@@ -165,14 +165,14 @@ class FluxCacheBehaviorTest {
         void evictByCacheName_reloadsAllKeys() {
             String keyA = uniqueKey("caf-clear");
             String keyB = uniqueKey("caf-clear");
-            int ageA = firstAge(testController.firstCacheByCaffeine(keyA));
-            int ageB = firstAge(testController.firstCacheByCaffeine(keyB));
+            int ageA = firstAmount(testOrderController.firstCacheByCaffeine(keyA));
+            int ageB = firstAmount(testOrderController.firstCacheByCaffeine(keyB));
 
-            testController.clearFirstCacheByCaffeineByName("firstCacheByCaffeine");
+            testOrderController.clearFirstCacheByCaffeineByName("orderCacheByCaffeine");
             awaitCacheSyncSettled();
 
-            assertThat(firstAge(testController.firstCacheByCaffeine(keyA))).isNotEqualTo(ageA);
-            assertThat(firstAge(testController.firstCacheByCaffeine(keyB))).isNotEqualTo(ageB);
+            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyA))).isNotEqualTo(ageA);
+            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyB))).isNotEqualTo(ageB);
             awaitCacheSyncSettled();
         }
 
@@ -180,12 +180,12 @@ class FluxCacheBehaviorTest {
         @DisplayName("CachePut 更新缓存值")
         void cachePut_updatesCachedValue() {
             String key = uniqueKey("caf-put");
-            int age = firstAge(testController.firstCacheByCaffeine(key));
-            assertThat(firstAge(testController.firstCacheByCaffeine(key))).isEqualTo(age);
+            int age = firstAmount(testOrderController.firstCacheByCaffeine(key));
+            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(key))).isEqualTo(age);
 
-            int putAge = firstAge(testController.firstCacheByCaffeinePutCache(key));
+            int putAge = firstAmount(testOrderController.firstCacheByCaffeinePutCache(key));
             assertThat(putAge).isNotEqualTo(age);
-            awaitCachedAge("firstCacheByCaffeine", key, putAge);
+            awaitCachedAmount("orderCacheByCaffeine", key, putAge);
         }
     }
 
@@ -198,9 +198,9 @@ class FluxCacheBehaviorTest {
         void rMap_sameKey_hitsCache() {
             String keyA = uniqueKey("redis-map");
             String keyB = uniqueKey("redis-map");
-            int ageA = firstAge(testController.firstCacheByRedis(keyA));
-            assertThat(firstAge(testController.firstCacheByRedis(keyA))).isEqualTo(ageA);
-            assertThat(firstAge(testController.firstCacheByRedis(keyB))).isNotEqualTo(ageA);
+            int ageA = firstAmount(testOrderController.firstCacheByRedis(keyA));
+            assertThat(firstAmount(testOrderController.firstCacheByRedis(keyA))).isEqualTo(ageA);
+            assertThat(firstAmount(testOrderController.firstCacheByRedis(keyB))).isNotEqualTo(ageA);
         }
 
         @Test
@@ -208,19 +208,19 @@ class FluxCacheBehaviorTest {
         void bucket_sameKey_hitsCache() {
             String keyA = uniqueKey("redis-bucket");
             String keyB = uniqueKey("redis-bucket");
-            int ageA = firstAge(testController.firstCacheByRedisBucket(keyA));
-            assertThat(firstAge(testController.firstCacheByRedisBucket(keyA))).isEqualTo(ageA);
-            assertThat(firstAge(testController.firstCacheByRedisBucket(keyB))).isNotEqualTo(ageA);
+            int ageA = firstAmount(testOrderController.firstCacheByRedisBucket(keyA));
+            assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(keyA))).isEqualTo(ageA);
+            assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(keyB))).isNotEqualTo(ageA);
         }
 
         @Test
         @DisplayName("Bucket 缓存 null")
         void bucket_cachesNull() {
             String key = uniqueKey("redis-bucket-null");
-            assertThat(testController.firstNullCacheByRedisBucket(key)).isNull();
-            assertThat(testController.firstNullCacheByRedisBucket(key)).isNull();
+            assertThat(testOrderController.firstNullCacheByRedisBucket(key)).isNull();
+            assertThat(testOrderController.firstNullCacheByRedisBucket(key)).isNull();
 
-            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("studentRedisBucketNull").get(key);
+            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("orderRedisBucketNull").get(key);
             assertThat(wrapper).isNotNull();
             assertThat(wrapper.get()).isNull();
         }
@@ -229,35 +229,35 @@ class FluxCacheBehaviorTest {
         @DisplayName("Bucket evict 后重新加载")
         void bucket_evict_reloads() {
             String key = uniqueKey("redis-bucket-evict");
-            int age = firstAge(testController.firstCacheByRedisBucket(key));
-            assertThat(firstAge(testController.firstCacheByRedisBucket(key))).isEqualTo(age);
+            int age = firstAmount(testOrderController.firstCacheByRedisBucket(key));
+            assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(key))).isEqualTo(age);
 
-            testController.deleteFirstCacheByRedisBucket(key);
-            assertThat(firstAge(testController.firstCacheByRedisBucket(key))).isNotEqualTo(age);
+            testOrderController.deleteFirstCacheByRedisBucket(key);
+            assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(key))).isNotEqualTo(age);
         }
 
         @Test
         @DisplayName("Bucket CachePut 更新缓存值")
         void bucket_cachePut_updatesValue() {
             String key = uniqueKey("redis-bucket-put");
-            int age = firstAge(testController.firstCacheByRedisBucket(key));
-            testController.deleteFirstCacheByRedisBucket(key);
+            int age = firstAmount(testOrderController.firstCacheByRedisBucket(key));
+            testOrderController.deleteFirstCacheByRedisBucket(key);
 
-            int putAge = firstAge(testController.putFirstCacheByRedisBucket(key));
+            int putAge = firstAmount(testOrderController.putFirstCacheByRedisBucket(key));
             assertThat(putAge).isNotEqualTo(age);
-            assertThat(firstAge(testController.firstCacheByRedisBucket(key))).isEqualTo(putAge);
+            assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(key))).isEqualTo(putAge);
         }
 
         @Test
         @DisplayName("RMap CachePut 更新缓存值")
         void rMap_cachePut_updatesValue() {
             String key = uniqueKey("redis-map-put");
-            int age = firstAge(testController.firstCacheByRedis(key));
-            assertThat(firstAge(testController.firstCacheByRedis(key))).isEqualTo(age);
+            int age = firstAmount(testOrderController.firstCacheByRedis(key));
+            assertThat(firstAmount(testOrderController.firstCacheByRedis(key))).isEqualTo(age);
 
-            int putAge = firstAge(testController.redisCachePut(key));
+            int putAge = firstAmount(testOrderController.redisCachePut(key));
             assertThat(putAge).isNotEqualTo(age);
-            assertThat(firstAge(testController.firstCacheByRedis(key))).isEqualTo(putAge);
+            assertThat(firstAmount(testOrderController.firstCacheByRedis(key))).isEqualTo(putAge);
         }
     }
 
@@ -268,36 +268,36 @@ class FluxCacheBehaviorTest {
         @Test
         @DisplayName("同 key 命中")
         void sameKey_hitsCache() {
-            assertHit(testController::secondaryCacheByCaffeineRedis, uniqueKey("l2"));
+            assertHit(testOrderController::secondaryCacheByCaffeineRedis, uniqueKey("l2"));
         }
 
         @Test
         @DisplayName("L1 miss 时回源 L2 并回填 L1，不重新查库")
         void l1Miss_hitsL2_andBackfillsL1() {
             String key = uniqueKey("l2-backfill");
-            int age = firstAge(testController.secondaryCacheByCaffeineRedis(key));
+            int age = firstAmount(testOrderController.secondaryCacheByCaffeineRedis(key));
 
             @SuppressWarnings({"rawtypes", "unchecked"})
             FluxMultiLevelCache multilevel =
-                    (FluxMultiLevelCache) cacheManager.getCache("studentLocalRedis");
+                    (FluxMultiLevelCache) cacheManager.getCache("orderLocalRedis");
             multilevel.getFluxFirstCache().evictDirectly(key);
             assertThat(multilevel.getFluxFirstCache().get(key)).isNull();
 
-            int fromL2 = firstAge(testController.secondaryCacheByCaffeineRedis(key));
+            int fromL2 = firstAmount(testOrderController.secondaryCacheByCaffeineRedis(key));
             assertThat(fromL2).isEqualTo(age);
             FluxCache.ValueWrapper l1 = multilevel.getFluxFirstCache().get(key);
             assertThat(l1).isNotNull();
-            assertThat(firstAge((List<StudentVO>) l1.get())).isEqualTo(age);
+            assertThat(firstAmount((List<OrderVO>) l1.get())).isEqualTo(age);
         }
 
         @Test
         @DisplayName("二级缓存允许缓存 null")
         void allowNull_cachesNullValue() {
             String key = uniqueKey("l2-null");
-            assertThat(testController.mockSelectSqlToNullBySecondaryCache(key)).isNull();
-            assertThat(testController.mockSelectSqlToNullBySecondaryCache(key)).isNull();
+            assertThat(testOrderController.mockSelectSqlToNullBySecondaryCache(key)).isNull();
+            assertThat(testOrderController.mockSelectSqlToNullBySecondaryCache(key)).isNull();
 
-            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("testNullSecondaryCache").get(key);
+            FluxCache.ValueWrapper<?> wrapper = cacheManager.getCache("orderTestNullSecondaryCache").get(key);
             assertThat(wrapper).isNotNull();
             assertThat(wrapper.get()).isNull();
         }
@@ -310,13 +310,13 @@ class FluxCacheBehaviorTest {
         @Test
         @DisplayName("一级手动缓存同 key 命中")
         void firstLevel_sameKey_hitsCache() {
-            assertHit(testController::productManualCache, uniqueKey("manual"));
+            assertHit(testOrderController::productManualCache, uniqueKey("manual"));
         }
 
         @Test
         @DisplayName("多级手动缓存同 key 命中")
         void multiLevel_sameKey_hitsCache() {
-            assertHit(testController::productManualMultiLevelCache, uniqueKey("manual-l2"));
+            assertHit(testOrderController::productManualMultiLevelCache, uniqueKey("manual-l2"));
         }
     }
 
@@ -328,39 +328,39 @@ class FluxCacheBehaviorTest {
         @ValueSource(booleans = {true, false})
         void multiLevel_batchPutAndGet(boolean async) {
             String prefix = uniqueKey("batch-l2");
-            testController.putAllManualMultiLevelCache(prefix, async);
-            awaitCacheKeys(MyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE, prefix, async);
+            testOrderController.putAllManualMultiLevelCache(prefix, async);
+            awaitCacheKeys(OrderMyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE, prefix, async);
 
-            Map<String, List> first = testController.getAllManualMultiLevelCache(prefix, async);
-            Map<String, List> other = testController.getAllManualMultiLevelCache(uniqueKey("batch-l2-other"), async);
+            Map<String, List> first = testOrderController.getAllManualMultiLevelCache(prefix, async);
+            Map<String, List> other = testOrderController.getAllManualMultiLevelCache(uniqueKey("batch-l2-other"), async);
             assertThat(first).isNotEqualTo(other);
-            assertThat(testController.getAllManualMultiLevelCache(prefix, async)).isEqualTo(first);
+            assertThat(testOrderController.getAllManualMultiLevelCache(prefix, async)).isEqualTo(first);
         }
 
         @ParameterizedTest(name = "Redis 一级批量 async={0}")
         @ValueSource(booleans = {true, false})
         void redisFirst_batchPutAndGet(boolean async) {
             String prefix = uniqueKey("batch-redis");
-            testController.pullAllRedisFirstCache(prefix, async);
-            awaitCacheKeys(MyFluxCacheDataRegistered.PRODUCT_Redis_First_CACHE, prefix, async);
+            testOrderController.pullAllRedisFirstCache(prefix, async);
+            awaitCacheKeys(OrderMyFluxCacheDataRegistered.PRODUCT_Redis_First_CACHE, prefix, async);
 
-            Map<String, List> first = testController.getAllRedisFirstCache(prefix, async);
-            Map<String, List> other = testController.getAllRedisFirstCache(uniqueKey("batch-redis-other"), async);
+            Map<String, List> first = testOrderController.getAllRedisFirstCache(prefix, async);
+            Map<String, List> other = testOrderController.getAllRedisFirstCache(uniqueKey("batch-redis-other"), async);
             assertThat(first).isNotEqualTo(other);
-            assertThat(testController.getAllRedisFirstCache(prefix, async)).isEqualTo(first);
+            assertThat(testOrderController.getAllRedisFirstCache(prefix, async)).isEqualTo(first);
         }
 
         @ParameterizedTest(name = "本地一级批量 async={0}")
         @ValueSource(booleans = {true, false})
         void localFirst_batchPutAndGet(boolean async) {
             String prefix = uniqueKey("batch-local");
-            testController.pullAllLocalFirstCache(prefix, async);
-            awaitCacheKeys(MyFluxCacheDataRegistered.PRODUCT_LOCAL_FIRST_CACHE, prefix, async);
+            testOrderController.pullAllLocalFirstCache(prefix, async);
+            awaitCacheKeys(OrderMyFluxCacheDataRegistered.PRODUCT_LOCAL_FIRST_CACHE, prefix, async);
 
-            Map<String, List> first = testController.getAllLocalFirstCache(prefix, async);
-            Map<String, List> other = testController.getAllLocalFirstCache(uniqueKey("batch-local-other"), async);
+            Map<String, List> first = testOrderController.getAllLocalFirstCache(prefix, async);
+            Map<String, List> other = testOrderController.getAllLocalFirstCache(uniqueKey("batch-local-other"), async);
             assertThat(first).isNotEqualTo(other);
-            assertThat(testController.getAllLocalFirstCache(prefix, async)).isEqualTo(first);
+            assertThat(testOrderController.getAllLocalFirstCache(prefix, async)).isEqualTo(first);
         }
 
         private void awaitCacheKeys(String cacheName, String prefix, boolean async) {
