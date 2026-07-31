@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -44,13 +45,15 @@ import java.util.List;
 @ConditionalOnBean(RedisConnectionFactory.class)
 @AutoConfigureBefore(FluxCacheCreatorAutoConfiguration.class)
 @AutoConfigureAfter(RedisAutoConfiguration.class)
+@Slf4j
 public class SpringDataRedisFluxCacheAutoConfiguration {
 
     public static final String FLUX_CACHE_REDIS_TEMPLATE = "fluxCacheRedisTemplate";
 
     @Bean(name = FLUX_CACHE_REDIS_TEMPLATE)
     @ConditionalOnMissingBean(name = FLUX_CACHE_REDIS_TEMPLATE)
-    public RedisTemplate<String, Object> fluxCacheRedisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, Object> fluxCacheRedisTemplate(RedisConnectionFactory connectionFactory,
+                                                                FluxCacheProperties cacheProperties) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         StringRedisSerializer keySerializer = new StringRedisSerializer();
@@ -58,7 +61,14 @@ public class SpringDataRedisFluxCacheAutoConfiguration {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-        objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        List<String> allowedPrefixes = cacheProperties.getRedis().getSerializationAllowedPrefixes();
+        if (allowedPrefixes == null || allowedPrefixes.contains("*")) {
+            log.warn("[FluxCache] Redis 反序列化白名单关闭或为空（*），存在反序列化 gadget 攻击风险，不建议生产使用");
+            objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        } else {
+            objectMapper.activateDefaultTyping(
+                    new AllowlistSubTypeValidator(allowedPrefixes), ObjectMapper.DefaultTyping.NON_FINAL);
+        }
         RedisSerializer<Object> valueSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         template.setKeySerializer(keySerializer);
         template.setHashKeySerializer(keySerializer);

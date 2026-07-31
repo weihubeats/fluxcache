@@ -8,6 +8,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.util.ObjectUtils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -72,6 +75,9 @@ public class FluxCacheProperties {
     @NestedConfigurationProperty
     private SecondaryCacheConfig secondaryCache;
 
+    @NestedConfigurationProperty
+    private RedisCacheConfig redis = new RedisCacheConfig();
+
     @Data
     public static class FirstCacheConfig extends CacheConfig {
 
@@ -79,6 +85,22 @@ public class FluxCacheProperties {
 
     @Data
     public static class SecondaryCacheConfig extends CacheConfig {
+
+    }
+
+    /**
+     * Redis 值序列化相关配置
+     */
+    @Data
+    public static class RedisCacheConfig {
+
+        /**
+         * Redis 值反序列化允许的类型前缀白名单（防 Jackson 反序列化 gadget 攻击）。
+         * 缓存值的业务 POJO 包名需要加入白名单；配置 "*" 表示允许所有类型（不推荐，等同关闭防护）
+         */
+        private List<String> serializationAllowedPrefixes = new ArrayList<>(Arrays.asList(
+                "java.lang.", "java.util.", "java.time.", "java.math.", "com.fluxcache."
+        ));
 
     }
 

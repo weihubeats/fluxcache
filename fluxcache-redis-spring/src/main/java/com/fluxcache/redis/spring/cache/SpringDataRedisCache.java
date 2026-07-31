@@ -5,10 +5,13 @@ import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.model.FluxCacheCacheable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.util.ObjectUtils;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -43,11 +46,21 @@ public class SpringDataRedisCache<K, V> extends FluxAbstractValueAdaptingCache<K
         if (ObjectUtils.isEmpty(keys)) {
             return Map.of();
         }
-        Map<K, V> retMap = new HashMap<>(keys.size());
+        // 一次 MGET 代替 N 次 GET，减少 RTT
+        List<String> redisKeys = new ArrayList<>(keys.size());
         for (K key : keys) {
-            Object value = redisTemplate.opsForValue().get(buildKey(key));
+            redisKeys.add(buildKey(key));
+        }
+        List<Object> values = redisTemplate.opsForValue().multiGet(redisKeys);
+        Map<K, V> retMap = new HashMap<>(keys.size());
+        if (ObjectUtils.isEmpty(values)) {
+            return retMap;
+        }
+        int size = Math.min(keys.size(), values.size());
+        for (int i = 0; i < size; i++) {
+            Object value = values.get(i);
             if (value != null) {
-                retMap.put(key, (V) value);
+                retMap.put(keys.get(i), (V) value);
             }
         }
         return retMap;
@@ -63,7 +76,20 @@ public class SpringDataRedisCache<K, V> extends FluxAbstractValueAdaptingCache<K
         if (ObjectUtils.isEmpty(map)) {
             return;
         }
-        map.forEach(this::putValue);
+        // pipeline 批量写入，一次 RTT 代替 N 次 SET
+        redisTemplate.executePipelined(new SessionCallback<Object>() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <K1, V1> Object execute(RedisOperations<K1, V1> operations) {
+                for (Map.Entry<K, V> entry : map.entrySet()) {
+                    Long ttl = getTtl();
+                    operations.opsForValue().set(
+                            (K1) buildKey(entry.getKey()), (V1) entry.getValue(),
+                            Duration.of(ttl, cacheable.getUnit().toChronoUnit()));
+                }
+                return null;
+            }
+        });
     }
 
     @Override
