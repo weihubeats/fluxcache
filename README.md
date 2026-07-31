@@ -1,317 +1,154 @@
 # fluxcache
-多级缓存框架(multilevel cache framework)
+多级缓存框架 (multilevel cache framework)
 
+## 特性
 
-# 特性
+- 自定义一级 / 二级缓存
+- 支持 Caffeine 分布式删除、更新（基于 Redis Pub/Sub）
+- 支持解决缓存雪崩（随机过期时间）
+- 支持缓存穿透（缓存 null）
+- Dashboard 操作缓存元数据 / 清空 / 按 key 查询与清理
+- Dashboard 缓存命中率等监控统计
+- 纯注解使用
+- **多 Redis 客户端**：默认 Spring Data Redis；Redisson 可选独立模块（含 `REDIS_MAP` / RMapCache）
 
-- 自定义一级缓存
-- 自定义二级缓存
-- 支持Caffeine 分布式删除、更新
-- 支持解决缓存雪崩(添加随机过期时间)
-- 支持缓存穿透(缓存null)
-- `dashboard`操作缓存元数据
-- `dashboard`操作缓存清空
-- `dashboard`支持缓存按key清空
-- `dashboard`支持缓存按key查询
-- 纯注解使用，无需关注底层实现
-- `dashboard`支持缓存相关监控统计(命中率等)
-- 支持`redisson`底层存储自由选择`RMapCache`还是`Bucket`
+## 模块
+
+| 模块 | 说明 |
+|------|------|
+| `fluxcache-core` | 核心引擎与抽象（无 Redis 客户端依赖） |
+| `fluxcache-redis-spring` | Spring Data Redis 实现（`REDIS`） |
+| `fluxcache-redis-redisson` | Redisson 实现（`REDIS` + `REDIS_MAP`），**不依赖** spring-data-redis |
+| `fluxcache-admin` | Dashboard REST |
+| `fluxcache-all-spring-boot-starter` | 默认入口：`redis-spring` + `admin` |
+| `fluxcache-example-starter` | starter 用法示例 |
+| `fluxcache-example-redisson` | 仅 Redisson 用法示例 |
 
 ## 使用
 
-可以参考[fluxcache-example](fluxcache-example)模块。这里简单介绍一下
+目前仅支持 Spring Boot。可参考：
 
-目前仅支持`spring boot`项目
+- [fluxcache-example-starter](fluxcache-example/fluxcache-example-starter)（默认）
+- [fluxcache-example-redisson](fluxcache-example/fluxcache-example-redisson)
 
-### 1. 引入依赖
-
-```xml
-        <dependency>
-            <groupId>io.github.weihubeats</groupId>
-            <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-            <version>0.0.3</version>
-        </dependency>
-```
-
-####  spring boot3以上版本请使用如下版本
+### 1. 引入依赖（推荐）
 
 ```xml
-        <dependency>
-            <groupId>io.github.weihubeats</groupId>
-            <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-            <version>3.0.0</version>
-        </dependency>
+<dependency>
+    <groupId>io.github.weihubeats</groupId>
+    <artifactId>fluxcache-all-spring-boot-starter</artifactId>
+    <version>0.0.3</version>
+</dependency>
 ```
 
->相关源码在`spring-boot-3.x`分支
+默认包含 Spring Data Redis 实现与 admin。应用需提供 `RedisConnectionFactory`（Boot 自动配置或自行声明）。
 
-### 2. 启动类添加注解`@EnableFluxCaching`
+Spring Boot 3 请使用 `spring-boot-3.x` 分支上的 `3.0.0` 版本。
 
-### 3. 配置redission
+### 仅使用 Redisson（不引入 spring-data-redis）
+
+```xml
+<dependency>
+    <groupId>io.github.weihubeats</groupId>
+    <artifactId>fluxcache-redis-redisson</artifactId>
+    <version>0.0.3</version>
+</dependency>
+<dependency>
+    <groupId>io.github.weihubeats</groupId>
+    <artifactId>fluxcache-admin</artifactId>
+    <version>0.0.3</version>
+</dependency>
+```
+
+并提供 `RedissonClient` Bean。引入哪个 Redis 模块就用哪套实现，互斥依赖即可。
+
+### 2. 启动类添加 `@EnableFluxCaching`
+
+### 3. Redis 连接
+
+**Starter / Spring Data Redis：**
 
 ```java
-@Configuration
-public class RedissonConfig {
-
-    @Value("${redis.host}")
-    private String redisLoginHost;
-    @Value("${redis.port}")
-    private Integer redisLoginPort;
-    @Value("${redis.password}")
-    private String redisLoginPassword;
-
-    @Bean
-    public RedissonClient redissonClient() {
-        return createRedis(redisLoginHost, redisLoginPort, redisLoginPassword);
-    }
-
-    private RedissonClient createRedis(String redisHost, Integer redisPort, String redisPassword) {
-        Config config = new Config();
-        SingleServerConfig singleServerConfig = config.useSingleServer();
-        singleServerConfig.setAddress("redis://" + redisHost + ":" + redisPort + "");
-        if (Objects.nonNull(redisPassword)) {
-            singleServerConfig.setPassword(redisPassword);
-        }
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        config.setCodec(new JsonJacksonCodec(objectMapper));
-        return Redisson.create(config);
-    }
-
+@Bean
+public RedisConnectionFactory redisConnectionFactory() {
+    return new LettuceConnectionFactory(new RedisStandaloneConfiguration("127.0.0.1", 6379));
 }
-
 ```
 
-### 4. 使用
+**Redisson：**
 
-目前添缓存的方式有两种
-
-手动和注解方式添加缓存
-
-### 注解添加缓存
-
-- 一级缓存使用`CAFFEINE`
 ```java
-    @GetMapping("/test")
-    @FluxCacheable(cacheName = "firstCacheByCaffeine", key = "#name",
-        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
-    public List<StudentVO> firstCacheByCaffeine(String name) {
-        return mockSelectSql();
-    }
+@Bean
+public RedissonClient redissonClient() {
+    Config config = new Config();
+    config.useSingleServer().setAddress("redis://127.0.0.1:6379");
+    config.setCodec(new JsonJacksonCodec(new ObjectMapper().registerModule(new JavaTimeModule())));
+    return Redisson.create(config);
+}
 ```
-- 一级缓存使用`redis`
+
+### 4. 缓存类型
+
+- `CAFFEINE`：本地缓存
+- `REDIS`：可移植 Redis KV（Spring Data Redis 或 Redisson Bucket）
+- `REDIS_MAP`：仅 Redisson `RMapCache`（按 entry TTL）
+
+### 注解示例
+
+一级 Caffeine：
 
 ```java
-    @GetMapping("/first/redis")
-    @FluxCacheable(cacheName = "studentRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
-    firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS_R_MAP, ttl = 5L))
-    public List<StudentVO> firstCacheByRedisRMap(String name) {
+@FluxCacheable(cacheName = "firstCacheByCaffeine", key = "#name",
+    firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
+public List<StudentVO> firstCacheByCaffeine(String name) {
     return mockSelectSql();
 }
-
 ```
 
-- 1级缓存使用`CAFFEINE`， 二级缓存使用`redis`
+一级 Redis：
 
 ```java
-    @GetMapping("/local-redis")
-    @FluxCacheable(cacheName = "studentLocalRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
-        firstCacheable = @FirstCacheable(ttl = 1L, fluxCacheType = FluxCacheType.CAFFEINE, maxSize = 2000, initSize = 20),
-        secondaryCacheable = @SecondaryCacheable(ttl = 3L, fluxCacheType = FluxCacheType.REDIS_R_MAP))
-    public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
-        return mockSelectSql();
-    }
-```
-
-### 手动添加缓存
-
-也支持自己手动注册管理缓存
-
-实现`FluxCacheDataRegistered`接口，然后在`registerCache`方法中注册自己手动管理的缓存
-
-```java
-@Component
-public class MyFluxCacheDataRegistered implements FluxCacheDataRegistered {
-
-    public static final String PRODUCT_MANUAL_CACHE = "productManualCache";
-
-    public static final String PRODUCT_MANUAL_MultiLevel_CACHE = "productManualMultiLevelCache";
-
-    public static final String PRODUCT_Redis_First_CACHE = "productRedisFirstCache";
-
-    public static final String PRODUCT_LOCAL_FIRST_CACHE = "productLocalFirstCache";
-
-    @Override
-    public List<FluxMultilevelCacheCacheable> registerCache() {
-        List<FluxMultilevelCacheCacheable> cacheables = new ArrayList<>();
-        FluxCacheCacheableConfig build = new FluxCacheCacheableConfig.Builder()
-            .setCacheType(FluxCacheType.CAFFEINE)
-            .setMaxSize(100)
-            .setTtl(10L)
-            .setInitSize(10)
-            .setUnit(TimeUnit.SECONDS)
-            .build();
-
-        FluxMultilevelCacheCacheable cacheable = new FluxMultilevelCacheCacheable.CacheConfigBuilder()
-            .setCacheName(PRODUCT_MANUAL_CACHE)
-            .setFluxCacheLevel(FluxCacheLevel.FirstCacheable)
-            .setFirstCacheConfig(build)
-            .build();
-
-
-        FluxCacheCacheableConfig build1 = new FluxCacheCacheableConfig.Builder()
-            .setCacheType(FluxCacheType.CAFFEINE)
-            .setMaxSize(100)
-            .setTtl(10L)
-            .setInitSize(10)
-            .setUnit(TimeUnit.SECONDS)
-            .build();
-
-        FluxCacheCacheableConfig build2 = new FluxCacheCacheableConfig.Builder()
-            .setCacheType(FluxCacheType.REDIS_R_MAP)
-            .setMaxSize(100)
-            .setTtl(10L)
-            .setInitSize(10)
-            .setUnit(TimeUnit.SECONDS)
-            .build();
-
-
-        FluxMultilevelCacheCacheable cacheable1 = new FluxMultilevelCacheCacheable.CacheConfigBuilder()
-            .setCacheName(PRODUCT_MANUAL_MultiLevel_CACHE)
-            .setFluxCacheLevel(FluxCacheLevel.SecondaryCacheable)
-            .setFirstCacheConfig(build1)
-            .setSecondaryCacheConfig(build2)
-            .build();
-
-        FluxCacheCacheableConfig RedisFirst = new FluxCacheCacheableConfig.Builder()
-            .setCacheType(FluxCacheType.REDIS_R_MAP)
-            .setMaxSize(100)
-            .setTtl(10L)
-            .setInitSize(10)
-            .setUnit(TimeUnit.SECONDS)
-            .build();
-
-        FluxMultilevelCacheCacheable redisFirstCacheable = new FluxMultilevelCacheCacheable.CacheConfigBuilder()
-            .setCacheName(PRODUCT_Redis_First_CACHE)
-            .setFluxCacheLevel(FluxCacheLevel.FirstCacheable)
-            .setFirstCacheConfig(RedisFirst)
-            .build();
-
-        FluxCacheCacheableConfig localFirst = new FluxCacheCacheableConfig.Builder()
-            .setCacheType(FluxCacheType.CAFFEINE)
-            .setMaxSize(100)
-            .setTtl(10L)
-            .setInitSize(10)
-            .setUnit(TimeUnit.SECONDS)
-            .build();
-
-        FluxMultilevelCacheCacheable localFirstCacheable = new FluxMultilevelCacheCacheable.CacheConfigBuilder()
-            .setCacheName(PRODUCT_LOCAL_FIRST_CACHE)
-            .setFluxCacheLevel(FluxCacheLevel.FirstCacheable)
-            .setFirstCacheConfig(localFirst)
-            .build();
-
-        cacheables.add(cacheable);
-        cacheables.add(cacheable1);
-        cacheables.add(redisFirstCacheable);
-        cacheables.add(localFirstCacheable);
-        return cacheables;
-    }
+@FluxCacheable(cacheName = "studentRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+    firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 5L))
+public List<StudentVO> firstCacheByRedis(String name) {
+    return mockSelectSql();
 }
 ```
+
+二级：Caffeine + Redis：
+
+```java
+@FluxCacheable(cacheName = "studentLocalRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
+    firstCacheable = @FirstCacheable(ttl = 1L, fluxCacheType = FluxCacheType.CAFFEINE, maxSize = 2000, initSize = 20),
+    secondaryCacheable = @SecondaryCacheable(ttl = 3L, fluxCacheType = FluxCacheType.REDIS))
+public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
+    return mockSelectSql();
+}
+```
+
+### 手动注册缓存
+
+实现 `FluxCacheDataRegistered`，在 `registerCache` 中返回 `FluxMultilevelCacheCacheable` 列表（示例见 example 模块）。
 
 ## 缓存刷新
 
-如果需要定时刷新缓存,可以使用`@FluxRefresh`注解
+使用 `@FluxRefresh`（需 Redis 模块提供 `FluxDistributedLock`）：
 
 ```java
-    @Override
-    @FluxCacheable(
-        cacheName = "testRefreshCache",
-        key = "'all'",
-        refresh = @FluxRefresh(
-            enabled = true,
-            provider = StudentProvider.class,
-            cron = "0/2 * * * * ?" // 0 */1 * * * ? 一分钟
-        )
-    )
-```
-
-`provider`需要实现`FluxPreheatDataProvider`接口，然后提供自己需要刷新缓存的key,并注入spring容器
-
-```java
-@Service
-public class StudentProvider implements FluxPreheatDataProvider<String> {
-    
-    
-    @Override
-    public Collection<String> getPreheatData() {
-        return List.of("all");
-    }
-}
-
-```
-
-如果需要开启缓存预热
-使用`preheatOnStartup = true,`即可
-
-```java
-    @Override
 @FluxCacheable(
-    cacheName = "multipleKeys",
+    cacheName = "studentCache",
     key = "#name",
     refresh = @FluxRefresh(
         enabled = true,
         provider = StudentMultipleKeysProvider.class,
-        preheatOnStartup = true,
-        cron = "0 */1 * * * ?" // 1分钟刷新一次
+        fixedRate = 1,
+        initialDelay = 0,
+        unit = TimeUnit.MINUTES,
+        preheatOnStartup = true
     )
 )
-public List<StudentVO> multipleKeys(String name) {
-    log.info("开始查询数据");
-    return randomStudents(name);
-}
 ```
 
-## 内置缓存管理接口
+## Dashboard
 
-默认同意请求前缀为`/cache/manager/v1`，详细接口返回情况可以查看[FluxCacheController.java](fluxcache-admin%2Fsrc%2Fmain%2Fjava%2Fcom%2Ffluxcache%2Fadmin%2Fcontroller%2FFluxCacheController.java)
-
-如果想要自定义可以通过配置`flux.cache.prefix`进行设置
-
-### 获取所有缓存使用统计请求
-
-`/getAllStatics`
-
-### 查看指定缓存数据
-
-`/getValue`
-
-### 查看所有缓存
-
-`/all/caches`
-
-### 获取全部缓存统计摘要
-
-`/statics/summary`
-
-### 清理指定缓存
-
-`/evict`
-
-### 清理所有缓存
-
-`/clear`
-
-# dashboard
-
-独立前端控制台见 [`fluxcache-dashboard`](fluxcache-dashboard/README.md)（Vue 3 + Vite，对接本模块 Admin API）。
-
-![home-page.png](./docs/images/home-page.png)
-
-![hit_rate.png](./docs/images/hit_rate.png)
-
-![cache-count.png](./docs/images/cache-count.png)
-
-![max-loading-time.png](./docs/images/max-loading-time.png)
-
+引入 starter（含 admin）后访问管理端能力；前端见 `fluxcache-dashboard`。

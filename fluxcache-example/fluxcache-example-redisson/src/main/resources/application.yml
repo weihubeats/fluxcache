@@ -1,0 +1,21 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: flux-cache-redisson
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password:
+
+flux:
+  cache:
+    defaultCacheLevel: FirstCacheable
+    asyncMonitorEnable: true
+    cacheMonitorEnable: true
+
+logging:
+  level:
+    com.fluxcache.example: DEBUG

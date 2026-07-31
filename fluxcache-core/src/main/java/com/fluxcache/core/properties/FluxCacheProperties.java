@@ -55,7 +55,6 @@ public class FluxCacheProperties {
      */
     private boolean allowCacheEmptyOptional = true;
 
-
     @NestedConfigurationProperty
     private FirstCacheConfig firstCache;
 

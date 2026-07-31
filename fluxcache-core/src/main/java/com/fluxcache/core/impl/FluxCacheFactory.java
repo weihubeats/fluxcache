@@ -11,7 +11,7 @@ import com.fluxcache.core.monitor.FluxCacheMonitor;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import com.fluxcache.core.spi.FluxCacheCreateContext;
 import com.fluxcache.core.spi.FluxCacheCreatorRegistry;
-import org.redisson.api.RedissonClient;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Objects;
 
@@ -21,13 +21,10 @@ import java.util.Objects;
  * @author : wh
  * @date : 2024/11/13 22:04
  */
+@RequiredArgsConstructor
 public class FluxCacheFactory {
 
     private final FluxCacheCreatorRegistry creatorRegistry;
-
-    public FluxCacheFactory(FluxCacheCreatorRegistry creatorRegistry) {
-        this.creatorRegistry = Objects.requireNonNull(creatorRegistry, "creatorRegistry must not be null");
-    }
 
     /**
      * Factory with built-in creators (mainly for tests / non-Spring usage).
@@ -36,14 +33,15 @@ public class FluxCacheFactory {
         return new FluxCacheFactory(FluxCacheCreatorRegistry.withDefaults());
     }
 
-    public FluxCache<?, ?> createFluxCache(FluxMultilevelCacheCacheable ca, RedissonClient redissonClient,
-                                           FluxCacheProperties cacheProperties, CacheSyncStrategy cacheSyncStrategy,
+    public FluxCache<?, ?> createFluxCache(FluxMultilevelCacheCacheable ca,
+                                           FluxCacheProperties cacheProperties,
+                                           CacheSyncStrategy cacheSyncStrategy,
                                            FluxCacheMonitor cacheMonitor) {
         FluxCacheLevel cacheLevel = Objects.equals(ca.getFluxCacheLevel(), FluxCacheLevel.NULL)
                 ? cacheProperties.getDefaultCacheLevel()
                 : ca.getFluxCacheLevel();
         FluxCacheCreateContext context = new FluxCacheCreateContext(
-                redissonClient, cacheSyncStrategy, cacheProperties, cacheMonitor);
+                cacheSyncStrategy, cacheProperties, cacheMonitor);
 
         if (Objects.equals(cacheLevel, FluxCacheLevel.FirstCacheable)) {
             FluxCacheConfig config = requireConfig(ca.getFirstCacheConfig(), "first", ca.getCacheName());
@@ -58,7 +56,7 @@ public class FluxCacheFactory {
             FluxAbstractValueAdaptingCache<?, ?> fluxSecondaryCache = createSingleLevelCache(ca, secondCfg, context);
 
             @SuppressWarnings({"rawtypes", "unchecked"})
-            FluxRedissonCaffeineCache<?, ?> cache = new FluxRedissonCaffeineCache(
+            FluxMultiLevelCache<?, ?> cache = new FluxMultiLevelCache(
                     ca.isAllowCacheNull(), ca.getCacheName(), fluxFirstCache, fluxSecondaryCache);
             return cache;
         }

@@ -4,11 +4,10 @@ import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;
 import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.annotation.FluxRefresh;
+import com.fluxcache.core.lock.FluxDistributedLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
@@ -28,7 +27,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -50,7 +48,7 @@ public class FluxRefreshTaskRegistrar implements ApplicationListener<ContextRefr
 
     private final FluxCacheManager cacheManager;
 
-    private final RedissonClient redissonClient;
+    private final FluxDistributedLock distributedLock;
 
     private final FluxCacheRefreshExecutor executor;
 
@@ -91,14 +89,11 @@ public class FluxRefreshTaskRegistrar implements ApplicationListener<ContextRefr
                     }
                     return;
                 }
-                // 获取可在代理对象上调用的方法（避免 JDK 动态代理问题）
                 Method invocableMethod = AopUtils.selectInvocableMethod(targetMethod, beanProxy.getClass());
 
-                // 预热
                 if (refresh.preheatOnStartup()) {
                     scheduleOneTime(() -> runRefresh(beanProxy, invocableMethod, cacheable.cacheName(), refresh, PREHEAT_LOCK_PREFIX), refresh, invocableMethod, cacheable.cacheName());
                 }
-                // 定时刷新
                 scheduleRecurring(() -> runRefresh(beanProxy, invocableMethod, cacheable.cacheName(), refresh, REFRESH_LOCK_PREFIX), refresh, invocableMethod, cacheable.cacheName());
                 methodCount.getAndIncrement();
 
@@ -166,122 +161,29 @@ public class FluxRefreshTaskRegistrar implements ApplicationListener<ContextRefr
             body.run();
             return;
         }
+        if (distributedLock == null) {
+            log.warn("[FluxCache] distributedLock enabled but no FluxDistributedLock bean; skip refresh for key {}", key);
+            return;
+        }
 
         try {
-            var lock = redissonClient.getLock(key);
-            if (lock.tryLock(fluxRefresh.lockWaitSeconds(), fluxRefresh.lockLeaseSeconds(), TimeUnit.SECONDS)) {
+            if (distributedLock.tryLock(key, fluxRefresh.lockWaitSeconds(), fluxRefresh.lockLeaseSeconds())) {
                 try {
                     body.run();
                 } finally {
-                    if (lock.isHeldByCurrentThread())
-                        lock.unlock();
+                    distributedLock.unlock(key);
                 }
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            log.error("[FluxCache] distributed lock error key={}", key, e);
         }
     }
 
     private String buildLockKey(String prefix, Object bean, Method method, String cacheName) {
         return prefix + bean.getClass().getName() + ":" + method.getName() + ":" + cacheName;
-    }
-
-    private void executeWithOptionalLock(String lockKey,
-                                         FluxRefresh refresh,
-                                         Runnable taskBody) {
-        if (!refresh.distributedLock()) {
-            taskBody.run();
-            return;
-        }
-        RLock lock = redissonClient.getLock(lockKey);
-
-        // todo maybe use properties to get default values
-        long waitSeconds = refresh.lockWaitSeconds();
-        long leaseSeconds = refresh.lockLeaseSeconds();
-
-        boolean locked = false;
-        try {
-            locked = lock.tryLock(waitSeconds, leaseSeconds, TimeUnit.SECONDS);
-            if (!locked) {
-                log.debug("[FluxCache] 获取锁失败 lockKey {} 等待 {}s", lockKey, waitSeconds);
-                return;
-            }
-            log.debug("[FluxCache] 获取锁成功 lockKey {}", lockKey);
-            taskBody.run();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("[FluxCache] 尝试获取锁被中断 lockKey {}", lockKey, e);
-        } catch (Exception ex) {
-            log.error("[FluxCache] 分布式锁执行异常 lockKey {}", lockKey, ex);
-        } finally {
-            if (locked && lock.isHeldByCurrentThread()) {
-                try {
-                    lock.unlock();
-                } catch (Exception unlockEx) {
-                    log.error("[FluxCache] 释放锁异常 lockKey {}", lockKey, unlockEx);
-                }
-            }
-        }
-    }
-
-    private void executeRefreshLogic(Object beanProxy,
-                                     Method method,
-                                     String cacheName,
-                                     FluxRefresh refresh,
-                                     boolean startupPreheat) {
-
-        long startNanos = System.nanoTime();
-        boolean success = true;
-        int keyCount = 0;
-        Throwable error = null;
-
-        try {
-            FluxPreheatDataProvider<?> provider = context.getBean(refresh.provider());
-
-            Collection<?> keys;
-            try {
-                keys = provider.getPreheatData();
-            } catch (Exception providerEx) {
-                log.error("[FluxCache] provider 获取预热数据异常 provider={} method={} cache={}",
-                        refresh.provider().getSimpleName(), method.getName(), cacheName, providerEx);
-                return;
-            }
-
-            if (keys == null || keys.isEmpty()) {
-                log.debug("[FluxCache] 无可刷新 key method={} cache={}", method.getName(), cacheName);
-                return;
-            }
-
-            keyCount = keys.size();
-
-            FluxCache cache = cacheManager.getCache(cacheName);
-            if (cache == null) {
-                log.error("[FluxCache] 找不到缓存 cacheName={} method={}", cacheName, method.getName());
-                return;
-            }
-
-            // todo 刷新策略 可扩展：EVICT_BATCH、PARALLEL、PUT_DIRECT 等
-            for (Object key : keys) {
-                invokeMethodForKey(beanProxy, method, key);
-            }
-
-            log.info("[FluxCache] 刷新完成 cache={} method={} keys={} startupPreheat={}",
-                    cacheName, method.getName(), keyCount, startupPreheat);
-
-        } catch (Throwable t) {
-            success = false;
-            error = t;
-            log.error("[FluxCache] 刷新执行异常 cache={} method={}", cacheName, method.getName(), t);
-        } finally {
-            long costMs = (System.nanoTime() - startNanos) / 1_000_000;
-            // metrics 占位：可接入 Micrometer
-            // metricsRecorder.record(cacheName, method, success, keyCount, costMs);
-            if (log.isDebugEnabled()) {
-                log.debug("[FluxCache] 刷新统计 cache={} method={} success={} keys={} cost={}ms error={}",
-                        cacheName, method.getName(), success, keyCount, costMs,
-                        (error == null ? "N/A" : error.getClass().getSimpleName()));
-            }
-        }
     }
 
     private void invokeMethodForKey(Object beanProxy, Method method, Object key)
@@ -304,9 +206,6 @@ public class FluxRefreshTaskRegistrar implements ApplicationListener<ContextRefr
                 pkg.startsWith("sun.");
     }
 
-    /**
-     * 计算抖动 (jitter) 用于错峰
-     */
     private Duration jitter(FluxRefresh refresh) {
         long boundMs = refresh.jitterMillis();
         if (boundMs <= 0)

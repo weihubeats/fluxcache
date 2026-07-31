@@ -10,12 +10,11 @@
     </parent>
 
     <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-    
 
     <dependencies>
         <dependency>
             <groupId>io.github.weihubeats</groupId>
-            <artifactId>fluxcache-core</artifactId>
+            <artifactId>fluxcache-redis-spring</artifactId>
         </dependency>
         <dependency>
             <groupId>io.github.weihubeats</groupId>

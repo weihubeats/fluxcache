@@ -134,7 +134,7 @@ export function parseCacheLayer(cfg?: FluxCacheConfig | null): CacheLayerDisplay
     typeLabel = 'Caffeine'
   } else if (type.startsWith('REDIS')) {
     kind = 'redis'
-    typeLabel = type === 'REDIS_BUCKET' ? 'Redis Bucket' : type === 'REDIS_R_MAP' ? 'Redis Map' : 'Redis'
+    typeLabel = type === 'REDIS' ? 'Redis' : type === 'REDIS_MAP' ? 'Redis Map' : 'Redis'
   }
   const ttlLabel = formatTtlShort(cfg.ttl, cfg.unit)
   const maxSizeLabel = cfg.maxSize != null && cfg.maxSize > 0 ? `max ${cfg.maxSize}` : null

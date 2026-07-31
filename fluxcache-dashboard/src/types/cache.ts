@@ -1,6 +1,6 @@
 export type FluxCacheLevel = 'NULL' | 'FirstCacheable' | 'SecondaryCacheable' | string
 
-export type FluxCacheType = 'CAFFEINE' | 'REDIS_R_MAP' | 'REDIS_BUCKET' | string
+export type FluxCacheType = 'CAFFEINE' | 'REDIS' | 'REDIS_MAP' | string
 
 export interface FluxCacheConfig {
   ttl?: number

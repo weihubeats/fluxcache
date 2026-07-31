@@ -6,16 +6,12 @@ import com.fluxcache.core.annotation.FluxCacheEvict;
 import com.fluxcache.core.annotation.FluxCachePut;
 import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.annotation.FluxSpringCacheAnnotationParser;
-import com.fluxcache.core.caffeine.RedissonLocalCacheEvictListener;
-import com.fluxcache.core.caffeine.RedissonLocalCachePutListener;
-import com.fluxcache.core.caffeine.sync.CacheSyncPostProcessor;
-import com.fluxcache.core.caffeine.sync.CacheSyncStrategy;
-import com.fluxcache.core.caffeine.sync.RedissonCacheSyncStrategy;
 import com.fluxcache.core.constants.ThreadPoolConstant;
 import com.fluxcache.core.interceptor.FluxAnnotationCacheOperationSource;
 import com.fluxcache.core.interceptor.FluxCacheAnnotationAdvisor;
 import com.fluxcache.core.interceptor.FluxCacheAnnotationInterceptor;
 import com.fluxcache.core.interceptor.FluxCacheOperationSource;
+import com.fluxcache.core.lock.FluxDistributedLock;
 import com.fluxcache.core.manual.FluxCacheCreatePostProcess;
 import com.fluxcache.core.manual.FluxCacheDataRegistered;
 import com.fluxcache.core.monitor.DefaultFluxCacheMonitor;
@@ -23,11 +19,10 @@ import com.fluxcache.core.monitor.FluxCacheMonitor;
 import com.fluxcache.core.preheat.FluxCacheRefreshExecutor;
 import com.fluxcache.core.preheat.FluxRefreshTaskRegistrar;
 import com.fluxcache.core.properties.FluxCacheProperties;
-import org.redisson.api.RedissonClient;
 import org.springframework.aop.Advisor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +33,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static com.fluxcache.core.constants.ThreadPoolConstant.DEFAULT_CORE_POOL_SIZE;
@@ -51,7 +45,6 @@ import static com.fluxcache.core.constants.ThreadPoolConstant.DEFAULT_QUEUE_SIZE
  * @description:
  */
 @Configuration(proxyBeanMethods = false)
-//@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
 @Import({FluxCacheProperties.class, FluxCacheCreatorAutoConfiguration.class})
 public class FluxProxyCacheAutoConfiguration {
 
@@ -94,27 +87,6 @@ public class FluxProxyCacheAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnClass(RedissonClient.class)
-    public CacheSyncStrategy redissonCacheSyncStrategy(RedissonClient redissonClient,
-        List<CacheSyncPostProcessor> cacheSyncPostProcessors) {
-        return new RedissonCacheSyncStrategy(redissonClient, cacheSyncPostProcessors);
-    }
-
-    @Bean
-    @ConditionalOnClass(RedissonClient.class)
-    public RedissonLocalCacheEvictListener redissonLocalCacheEvictListener(FluxCacheManager cacheManager,
-        FluxCacheProperties cacheProperties, RedissonClient redissonClient) {
-        return new RedissonLocalCacheEvictListener(cacheManager, cacheProperties, redissonClient);
-    }
-
-    @Bean
-    @ConditionalOnClass(RedissonClient.class)
-    public RedissonLocalCachePutListener redissonLocalCachePutListener(FluxCacheManager cacheManager,
-        FluxCacheProperties cacheProperties, RedissonClient redissonClient) {
-        return new RedissonLocalCachePutListener(cacheManager, cacheProperties, redissonClient);
-    }
-
-    @Bean
     public FluxCacheMonitor cacheMonitor(CacheThreadPoolExecutor threadPoolManager,
         FluxCacheProperties cacheProperties) {
         return new DefaultFluxCacheMonitor(threadPoolManager, cacheProperties);
@@ -134,12 +106,13 @@ public class FluxProxyCacheAutoConfiguration {
         return new FluxCacheCreatePostProcess(cacheDataRegistered, cacheManager, cacheProperties, cacheMonitor);
     }
 
-
     @Bean
-    @ConditionalOnClass(RedissonClient.class)
+    @ConditionalOnBean(FluxDistributedLock.class)
     public FluxRefreshTaskRegistrar cacheRefreshTaskRegistrar(ApplicationContext context, TaskScheduler taskScheduler,
-                                                              FluxCacheManager cacheManager, RedissonClient redissonClient) {
-        return new FluxRefreshTaskRegistrar(context, taskScheduler, cacheManager, redissonClient, new FluxCacheRefreshExecutor());
+                                                              FluxCacheManager cacheManager,
+                                                              ObjectProvider<FluxDistributedLock> distributedLock) {
+        return new FluxRefreshTaskRegistrar(context, taskScheduler, cacheManager,
+                distributedLock.getIfAvailable(), new FluxCacheRefreshExecutor());
     }
 
     @Bean
@@ -151,5 +124,4 @@ public class FluxProxyCacheAutoConfiguration {
         scheduler.setDaemon(true);
         return scheduler;
     }
-
 }

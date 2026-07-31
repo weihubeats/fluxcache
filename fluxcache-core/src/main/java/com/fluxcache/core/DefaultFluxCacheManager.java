@@ -1,6 +1,7 @@
 package com.fluxcache.core;
 
 import com.fluxcache.core.caffeine.sync.CacheSyncStrategy;
+import com.fluxcache.core.caffeine.sync.NoOpCacheSyncStrategy;
 import com.fluxcache.core.exception.FluxCacheMetaDataException;
 import com.fluxcache.core.impl.FluxCacheFactory;
 import com.fluxcache.core.interceptor.FluxCacheOperationSource;
@@ -13,9 +14,9 @@ import com.fluxcache.core.monitor.MonitorEventEnum;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RedissonClient;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.util.ReflectionUtils;
 
@@ -36,19 +37,11 @@ import java.util.concurrent.ConcurrentMap;
 @Slf4j
 public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProcessor {
 
-    /**
-     * cache
-     */
     private final ConcurrentMap<String, FluxCache> cacheMap = new ConcurrentHashMap<>(16);
 
-    /**
-     * cache metaData
-     */
     private final ConcurrentMap<String, FluxCacheOperation> fluxCacheMetaData = new ConcurrentHashMap<>(16);
 
-    private final RedissonClient redissonClient;
-
-    private final CacheSyncStrategy cacheSyncStrategy;
+    private final ObjectProvider<CacheSyncStrategy> cacheSyncStrategyProvider;
 
     private final FluxCacheProperties cacheProperties;
 
@@ -58,9 +51,13 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
 
     private final FluxCacheFactory fluxCacheFactory;
 
+    private CacheSyncStrategy cacheSyncStrategy() {
+        return cacheSyncStrategyProvider.getIfAvailable(NoOpCacheSyncStrategy::new);
+    }
+
     @Override
     public void createCache(FluxMultilevelCacheCacheable cacheable) {
-        FluxCache<?, ?> cache = fluxCacheFactory.createFluxCache(cacheable, redissonClient, cacheProperties, cacheSyncStrategy, fluxCacheMonitor);
+        FluxCache<?, ?> cache = fluxCacheFactory.createFluxCache(cacheable, cacheProperties, cacheSyncStrategy(), fluxCacheMonitor);
         cacheMap.put(cacheable.getCacheName(), cache);
         fluxCacheMetaData.put(cacheable.getCacheName(), cacheable);
         if (cacheProperties.isCacheMonitorEnable()) {
@@ -80,7 +77,6 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
     public <K, V> V getCacheOrPut(String cacheName, K key, Callable<V> valueLoader) {
         FluxCache<K, V> cache = cacheMap.get(cacheName);
         if (Objects.isNull(cache)) {
-            // 无缓存实例：直接加载并返回（不统计）
             try {
                 return valueLoader.call();
             } catch (Exception e) {
@@ -88,7 +84,6 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
             }
         }
 
-        // 先尝试命中
         try {
             FluxCache.ValueWrapper wrapper = cache.get(key);
             if (wrapper != null) {
@@ -97,10 +92,8 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
             }
         } catch (Exception getEx) {
             log.error("cache.get error cache={} key={}", cacheName, key, getEx);
-            // 视为 miss 继续加载
         }
 
-        // 未命中 -> 加载 & 写入
         publish(cacheName, MonitorEventEnum.CACHE_MISSING, keyToString(key), 1L, 0L);
 
         long begin = System.nanoTime();
@@ -175,8 +168,7 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
             if (Objects.nonNull(op) && op instanceof FluxMultilevelCacheCacheable) {
                 FluxMultilevelCacheCacheable ca = (FluxMultilevelCacheCacheable) op;
                 if (!cacheMap.containsKey(op.getCacheName())) {
-                    // 相同缓存名 只能有一个元数据
-                    FluxCache cache = fluxCacheFactory.createFluxCache(ca, redissonClient, cacheProperties, cacheSyncStrategy, fluxCacheMonitor);
+                    FluxCache cache = fluxCacheFactory.createFluxCache(ca, cacheProperties, cacheSyncStrategy(), fluxCacheMonitor);
                     log.info("create cacheName {}", ca.getCacheName());
                     cacheMap.put(op.getCacheName(), cache);
                     fluxCacheMetaData.put(op.getCacheName(), op);
@@ -202,7 +194,6 @@ public class DefaultFluxCacheManager implements FluxCacheManager, BeanPostProces
             return "null";
         try {
             String s = String.valueOf(key);
-            // 如需脱敏可在此处理
             return s.length() > 256 ? s.substring(0, 256) : s;
         } catch (Exception e) {
             return key.getClass().getName();
