@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: flux-cache
+    name: flux-cache-order
 
 redis:
   host: 127.0.0.1
@@ -12,6 +12,7 @@ redis:
 
 flux:
   cache:
+    namespace: flux-cache-order
     defaultCacheLevel: FirstCacheable
     asyncMonitorEnable: true
     cacheMonitorEnable: true

@@ -11,8 +11,8 @@ import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.annotation.SecondaryCacheable;
 import com.fluxcache.core.enums.FluxCacheLevel;
 import com.fluxcache.core.enums.FluxCacheType;
-import com.fluxcache.example.config.MyFluxCacheDataRegistered;
-import com.fluxcache.example.vo.StudentVO;
+import com.fluxcache.example.config.OrderMyFluxCacheDataRegistered;
+import com.fluxcache.example.vo.OrderVO;
 import com.google.common.collect.Lists;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 @RestController
 @Slf4j
 @RequiredArgsConstructor
-public class TestController {
+public class TestOrderController {
 
     private final DefaultFluxCacheManager cacheManager;
 
@@ -66,9 +66,9 @@ public class TestController {
     }
 
     @GetMapping("/test")
-    @FluxCacheable(cacheName = "firstCacheByCaffeine", key = "#name",
+    @FluxCacheable(cacheName = "orderCacheByCaffeine", key = "#name",
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
-    public List<StudentVO> firstCacheByCaffeine(String name) {
+    public List<OrderVO> firstCacheByCaffeine(String name) {
         return mockSelectSql();
     }
 
@@ -79,49 +79,49 @@ public class TestController {
      * @return
      */
     @GetMapping("/firstCacheByCaffeineAndOptional")
-    @FluxCacheable(cacheName = "firstCacheByCaffeineAndOptional", key = "#name",
+    @FluxCacheable(cacheName = "orderCacheByCaffeineAndOptional", key = "#name",
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
-    public Optional<List<StudentVO>> firstCacheByCaffeineAndOptional(String name) {
+    public Optional<List<OrderVO>> firstCacheByCaffeineAndOptional(String name) {
         return mockSelectSqlAndOptional();
     }
 
     @DeleteMapping("/deleteFirstCacheByCaffeineAndOptional")
-    @FluxCacheEvict(cacheName = "firstCacheByCaffeineAndOptional", key = "#name")
+    @FluxCacheEvict(cacheName = "orderCacheByCaffeineAndOptional", key = "#name")
     public void clearFirstCacheByCaffeineAndOptional(String name) {
         log.info("删除缓存");
     }
 
     @GetMapping("/redis")
-    @FluxCacheable(cacheName = "studentRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+    @FluxCacheable(cacheName = "orderRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 5L))
-    public List<StudentVO> firstCacheByRedis(String name) {
+    public List<OrderVO> firstCacheByRedis(String name) {
         return mockSelectSql();
     }
 
     @GetMapping("/redis-bucket")
-    @FluxCacheable(cacheName = "studentRedisBucket", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+    @FluxCacheable(cacheName = "orderRedisBucket", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 1L))
-    public List<StudentVO> firstCacheByRedisBucket(String name) {
+    public List<OrderVO> firstCacheByRedisBucket(String name) {
         return mockSelectSql();
     }
 
     @GetMapping("/redis-bucket-null")
-    @FluxCacheable(cacheName = "studentRedisBucketNull", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+    @FluxCacheable(cacheName = "orderRedisBucketNull", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 1L))
-    public List<StudentVO> firstNullCacheByRedisBucket(String name) {
+    public List<OrderVO> firstNullCacheByRedisBucket(String name) {
         System.out.println("开始查询数据库");
         return null;
     }
 
     @DeleteMapping("/redis-bucket")
-    @FluxCacheEvict(cacheName = "studentRedisBucket", key = "#name")
+    @FluxCacheEvict(cacheName = "orderRedisBucket", key = "#name")
     public void deleteFirstCacheByRedisBucket(String name) {
         System.out.println("开始删除 redis-bucket 缓存");
     }
 
     @PutMapping("/redis-bucket")
-    @FluxCachePut(cacheName = "studentRedisBucket", key = "#name")
-    public List<StudentVO> putFirstCacheByRedisBucket(String name) {
+    @FluxCachePut(cacheName = "orderRedisBucket", key = "#name")
+    public List<OrderVO> putFirstCacheByRedisBucket(String name) {
         return mockSelectSql();
 
     }
@@ -132,7 +132,7 @@ public class TestController {
      * @param name
      */
     @DeleteMapping("/deleteCache")
-    @FluxCacheEvict(cacheName = "firstCacheByCaffeine", key = "#name")
+    @FluxCacheEvict(cacheName = "orderCacheByCaffeine", key = "#name")
     public void clearFirstCacheByCaffeineByKey(String name) {
         log.info("删除缓存");
     }
@@ -144,10 +144,10 @@ public class TestController {
      * @return
      */
     @PutMapping("/firstCacheByCaffeinePutCache")
-    @FluxCachePut(cacheName = "firstCacheByCaffeine", key = "#aa")
-    public List<StudentVO> firstCacheByCaffeinePutCache(String aa) {
+    @FluxCachePut(cacheName = "orderCacheByCaffeine", key = "#aa")
+    public List<OrderVO> firstCacheByCaffeinePutCache(String aa) {
         log.info("更新缓存");
-        return Lists.newArrayList(new StudentVO(4L, "小奏技术44", RandomUtils.nextInt(1, 1000)), new StudentVO(5L, "小奏技术55", RandomUtils.nextInt(1, 1000)));
+        return Lists.newArrayList(new OrderVO(4L, "小奏技术44", RandomUtils.nextInt(1, 1000)), new OrderVO(5L, "小奏技术55", RandomUtils.nextInt(1, 1000)));
     }
 
     /**
@@ -156,7 +156,7 @@ public class TestController {
      * @param name
      */
     @DeleteMapping("/deleteCache/name")
-    @FluxCacheEvict(cacheName = "firstCacheByCaffeine")
+    @FluxCacheEvict(cacheName = "orderCacheByCaffeine")
     public void clearFirstCacheByCaffeineByName(String name) {
         log.info("删除缓存");
     }
@@ -168,18 +168,18 @@ public class TestController {
      * @return
      */
     @GetMapping("/local-redis")
-    @FluxCacheable(cacheName = "studentLocalRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
+    @FluxCacheable(cacheName = "orderLocalRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
         firstCacheable = @FirstCacheable(ttl = 1L, fluxCacheType = FluxCacheType.CAFFEINE, maxSize = 2000, initSize = 20),
         secondaryCacheable = @SecondaryCacheable(ttl = 3L, fluxCacheType = FluxCacheType.REDIS))
-    public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
+    public List<OrderVO> secondaryCacheByCaffeineRedis(String name) {
         return mockSelectSql();
     }
 
     @GetMapping("/test-null-firstCache")
-    @FluxCacheable(cacheName = "testNullFirstCache", key = "#name",
+    @FluxCacheable(cacheName = "orderTestNullFirstCache", key = "#name",
         fluxCacheLevel = FluxCacheLevel.FirstCacheable,
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
-    public List<StudentVO> mockSelectSqlToNullByFirstCache(String name) {
+    public List<OrderVO> mockSelectSqlToNullByFirstCache(String name) {
         return mockSelectSqlToNull();
     }
 
@@ -189,59 +189,59 @@ public class TestController {
      * @return
      */
     @GetMapping("/test-no-null-firstCache")
-    @FluxCacheable(cacheName = "testNoNullFirstCache", key = "#name",
+    @FluxCacheable(cacheName = "orderTestNoNullFirstCache", key = "#name",
         fluxCacheLevel = FluxCacheLevel.FirstCacheable,
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20), allowCacheNull = false)
-    public List<StudentVO> mockSelectSqlToNoNullByFirstCache(String name) {
+    public List<OrderVO> mockSelectSqlToNoNullByFirstCache(String name) {
         return mockSelectSqlToNull();
     }
 
     @GetMapping("/test-null-secondaryCache")
-    @FluxCacheable(cacheName = "testNullSecondaryCache", key = "#name",
+    @FluxCacheable(cacheName = "orderTestNullSecondaryCache", key = "#name",
         fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20),
         secondaryCacheable = @SecondaryCacheable(ttl = 5L, fluxCacheType = FluxCacheType.REDIS))
-    public List<StudentVO> mockSelectSqlToNullBySecondaryCache(String name) {
+    public List<OrderVO> mockSelectSqlToNullBySecondaryCache(String name) {
         return mockSelectSqlToNull();
     }
 
     @GetMapping("/test-null")
-    @FluxCacheable(cacheName = "testNull", key = "#name",
+    @FluxCacheable(cacheName = "orderTestNull", key = "#name",
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
-    public List<StudentVO> mockSelectSqlToNull(String name) {
+    public List<OrderVO> mockSelectSqlToNull(String name) {
         return mockSelectSqlToNull();
     }
 
     @PutMapping("/put")
-    @FluxCachePut(cacheName = "student", key = "#name")
-    public List<StudentVO> localCachePut(String name) {
+    @FluxCachePut(cacheName = "order", key = "#name")
+    public List<OrderVO> localCachePut(String name) {
         log.info("更新缓存");
-        return Lists.newArrayList(new StudentVO(4L, "小奏技术44", RandomUtils.nextInt(1, 1000)), new StudentVO(5L, "小奏技术55", 55));
+        return Lists.newArrayList(new OrderVO(4L, "小奏技术44", RandomUtils.nextInt(1, 1000)), new OrderVO(5L, "小奏技术55", 55));
     }
 
     @PutMapping("/putRedis")
-    @FluxCachePut(cacheName = "studentRedis", key = "#name")
-    public List<StudentVO> redisCachePut(String name) {
+    @FluxCachePut(cacheName = "orderRedis", key = "#name")
+    public List<OrderVO> redisCachePut(String name) {
         log.info("更新缓存");
-        return Lists.newArrayList(new StudentVO(6L, "redis66", RandomUtils.nextInt(1, 1000)), new StudentVO(7L, "redis77", RandomUtils.nextInt(1, 1000)));
+        return Lists.newArrayList(new OrderVO(6L, "redis66", RandomUtils.nextInt(1, 1000)), new OrderVO(7L, "redis77", RandomUtils.nextInt(1, 1000)));
     }
 
     @GetMapping("/productManualCache")
-    public List<StudentVO> productManualCache(String name) {
-        List<StudentVO> studentVOS = cacheManager.getCacheOrPut(MyFluxCacheDataRegistered.PRODUCT_MANUAL_CACHE, name, this::mockSelectSql);
-        return studentVOS;
+    public List<OrderVO> productManualCache(String name) {
+        List<OrderVO> orderVOS = cacheManager.getCacheOrPut(OrderMyFluxCacheDataRegistered.PRODUCT_MANUAL_CACHE, name, this::mockSelectSql);
+        return orderVOS;
     }
 
     @GetMapping("/productManualMultiLevelCache")
-    public List<StudentVO> productManualMultiLevelCache(String name) {
-        List<StudentVO> studentVOS = cacheManager.getCacheOrPut(MyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE, name, this::mockSelectSql);
-        return studentVOS;
+    public List<OrderVO> productManualMultiLevelCache(String name) {
+        List<OrderVO> orderVOS = cacheManager.getCacheOrPut(OrderMyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE, name, this::mockSelectSql);
+        return orderVOS;
 
     }
 
     @GetMapping("/getAllManualMultiLevelCache")
     public Map<String, List> getAllManualMultiLevelCache(String name, boolean isAsync) {
-        FluxCache<String, List> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
+        FluxCache<String, List> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
         if (isAsync) {
             return cache.getAllAsync(Arrays.asList(name + "1", name + "2"), List.class);
         } else {
@@ -251,8 +251,8 @@ public class TestController {
 
     @GetMapping("/putAllManualMultiLevelCache")
     public void putAllManualMultiLevelCache(String name, boolean isAsync) {
-        FluxCache<String, List<StudentVO>> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
-        Map<String, List<StudentVO>> map = new HashMap<>();
+        FluxCache<String, List<OrderVO>> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
+        Map<String, List<OrderVO>> map = new HashMap<>();
         map.put(name + "1", mockSelectSql());
         map.put(name + "2", mockSelectSql());
         if (isAsync) {
@@ -264,7 +264,7 @@ public class TestController {
 
     @GetMapping("/getAllRedisFirstCache")
     public Map<String, List> getAllRedisFirstCache(String name, boolean isAsync) {
-        FluxCache<String, List> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_Redis_First_CACHE);
+        FluxCache<String, List> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_Redis_First_CACHE);
         if (isAsync) {
             return cache.getAllAsync(Arrays.asList(name + "1", name + "2"), List.class);
         } else {
@@ -274,8 +274,8 @@ public class TestController {
 
     @GetMapping("/pullAllRedisFirstCache")
     public void pullAllRedisFirstCache(String name, boolean isAsync) {
-        FluxCache<String, List<StudentVO>> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_Redis_First_CACHE);
-        Map<String, List<StudentVO>> map = new HashMap<>();
+        FluxCache<String, List<OrderVO>> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_Redis_First_CACHE);
+        Map<String, List<OrderVO>> map = new HashMap<>();
         map.put(name + "1", mockSelectSql());
         map.put(name + "2", mockSelectSql());
         if (isAsync) {
@@ -287,7 +287,7 @@ public class TestController {
 
     @GetMapping("/getAllLocalFirstCache")
     public Map<String, List> getAllLocalFirstCache(String name, boolean isAsync) {
-        FluxCache<String, List> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_LOCAL_FIRST_CACHE);
+        FluxCache<String, List> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_LOCAL_FIRST_CACHE);
         if (isAsync) {
             return cache.getAllAsync(Arrays.asList(name + "1", name + "2"), List.class);
         } else {
@@ -297,8 +297,8 @@ public class TestController {
 
     @GetMapping("/pullAllLocalFirstCache")
     public void pullAllLocalFirstCache(String name, boolean isAsync) {
-        FluxCache<String, List<StudentVO>> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_LOCAL_FIRST_CACHE);
-        Map<String, List<StudentVO>> map = new HashMap<>();
+        FluxCache<String, List<OrderVO>> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_LOCAL_FIRST_CACHE);
+        Map<String, List<OrderVO>> map = new HashMap<>();
         map.put(name + "1", mockSelectSql());
         map.put(name + "2", mockSelectSql());
         if (isAsync) {
@@ -308,18 +308,18 @@ public class TestController {
         }
     }
 
-    private List<StudentVO> mockSelectSql() {
+    private List<OrderVO> mockSelectSql() {
         log.info("开始查询数据");
-        return Lists.newArrayList(new StudentVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new StudentVO(2L, "小奏技术1", RandomUtils.nextInt(1, 10000)));
+        return Lists.newArrayList(new OrderVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new OrderVO(2L, "小奏技术1", RandomUtils.nextInt(1, 10000)));
     }
 
-    private List<StudentVO> mockSelectSqlToNull() {
+    private List<OrderVO> mockSelectSqlToNull() {
         log.info("开始查询数据");
         return null;
     }
 
-    private Optional<List<StudentVO>> mockSelectSqlAndOptional() {
+    private Optional<List<OrderVO>> mockSelectSqlAndOptional() {
         log.info("开始查询数据");
-        return Optional.of(Lists.newArrayList(new StudentVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new StudentVO(2L, "小奏技术1", RandomUtils.nextInt(1, 10000))));    }
+        return Optional.of(Lists.newArrayList(new OrderVO(1L, "小奏技术", RandomUtils.nextInt(1, 1000)), new OrderVO(2L, "小奏技术1", RandomUtils.nextInt(1, 10000))));    }
 
 }

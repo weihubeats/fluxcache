@@ -1,8 +1,8 @@
 package com.fluxcache.example.controller;
 
 import com.fluxcache.core.utils.JsonUtil;
-import com.fluxcache.example.service.StudentProviderService;
-import com.fluxcache.example.vo.StudentVO;
+import com.fluxcache.example.service.OrderProviderService;
+import com.fluxcache.example.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,20 +20,20 @@ import java.util.List;
 @RequestMapping("/test/refreshCache")
 @Slf4j
 @RequiredArgsConstructor
-public class TestRefreshCacheController {
+public class TestRefreshOrderCacheController {
 
-    private final StudentProviderService studentProviderService;
+    private final OrderProviderService orderProviderService;
 
     @GetMapping("/nullParam")
-    public List<StudentVO> testRefreshCache() {
-        List<StudentVO> vos = studentProviderService.testRefreshCache();
+    public List<OrderVO> testRefreshCache() {
+        List<OrderVO> vos = orderProviderService.testRefreshCache();
         log.info("testRefreshCache result: {}", JsonUtil.serialize2Json(vos));
         return vos;
     }
 
 /*    @GetMapping("/multiple-keys")
-    public List<StudentVO> testMultipleKeys(String name) {
-        List<StudentVO> vos = studentService.multipleKeys(name);
+    public List<OrderVO> testMultipleKeys(String name) {
+        List<OrderVO> vos = orderService.multipleKeys(name);
         log.info("multiple-keys result: {}", JsonUtil.serialize2Json(vos));
         return vos;
     }*/

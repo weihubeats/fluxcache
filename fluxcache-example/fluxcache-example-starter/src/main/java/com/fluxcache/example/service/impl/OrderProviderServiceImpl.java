@@ -2,11 +2,11 @@ package com.fluxcache.example.service.impl;
 
 import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.annotation.FluxRefresh;
-import com.fluxcache.example.service.StudentMultipleKeysProvider;
-import com.fluxcache.example.service.StudentProvider;
-import com.fluxcache.example.service.StudentProviderService;
-import com.fluxcache.example.utils.RandomDataUtils;
-import com.fluxcache.example.vo.StudentVO;
+import com.fluxcache.example.service.OrderMultipleKeysProvider;
+import com.fluxcache.example.service.OrderProvider;
+import com.fluxcache.example.service.OrderProviderService;
+import com.fluxcache.example.utils.OrderDataUtils;
+import com.fluxcache.example.vo.OrderVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -19,36 +19,36 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class StudentProviderServiceImpl implements StudentProviderService {
+public class OrderProviderServiceImpl implements OrderProviderService {
 
     @Override
     @FluxCacheable(
-            cacheName = "testRefreshCache",
+            cacheName = "orderTestRefreshCache",
             key = "'all'",
             refresh = @FluxRefresh(
                     enabled = true,
-                    provider = StudentProvider.class,
+                    provider = OrderProvider.class,
                     cron = "0/2 * * * * ?" // 0 */1 * * * ? 一分钟
             )
     )
-    public List<StudentVO> testRefreshCache() {
+    public List<OrderVO> testRefreshCache() {
         log.info("开始查询数据");
-        return RandomDataUtils.randomStudents();
+        return OrderDataUtils.randomOrders();
     }
 
     @FluxCacheable(
-            cacheName = "refreshCacheByOneParam",
+            cacheName = "orderRefreshCacheByOneParam",
             key = "#name",
             refresh = @FluxRefresh(
                     enabled = true,
-                    provider = StudentMultipleKeysProvider.class,
+                    provider = OrderMultipleKeysProvider.class,
                     preheatOnStartup = true,
                     cron = "0/2 * * * * ?" // 2s刷新一次
             )
     )
     @Override
-    public List<StudentVO> refreshCacheByOneParam(String name) {
-        return RandomDataUtils.randomStudents();
+    public List<OrderVO> refreshCacheByOneParam(String name) {
+        return OrderDataUtils.randomOrders();
     }
 
 }

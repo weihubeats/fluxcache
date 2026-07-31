@@ -17,15 +17,15 @@ import java.util.concurrent.TimeUnit;
  * @description:
  */
 @Component
-public class MyFluxCacheDataRegistered implements FluxCacheDataRegistered {
+public class OrderMyFluxCacheDataRegistered implements FluxCacheDataRegistered {
 
-    public static final String PRODUCT_MANUAL_CACHE = "productManualCache";
+    public static final String PRODUCT_MANUAL_CACHE = "productManualOrderCache";
 
-    public static final String PRODUCT_MANUAL_MultiLevel_CACHE = "productManualMultiLevelCache";
+    public static final String PRODUCT_MANUAL_MultiLevel_CACHE = "productManualMultiLevelOrderCache";
 
-    public static final String PRODUCT_Redis_First_CACHE = "productRedisFirstCache";
+    public static final String PRODUCT_Redis_First_CACHE = "productRedisFirstOrderCache";
 
-    public static final String PRODUCT_LOCAL_FIRST_CACHE = "productLocalFirstCache";
+    public static final String PRODUCT_LOCAL_FIRST_CACHE = "productLocalFirstOrderCache";
 
     @Override
     public List<FluxMultilevelCacheCacheable> registerCache() {

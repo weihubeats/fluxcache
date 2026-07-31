@@ -2,10 +2,10 @@ package com.fluxcache.example.service.impl;
 
 import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.annotation.FluxRefresh;
-import com.fluxcache.example.service.StudentMultipleKeysProvider;
-import com.fluxcache.example.service.StudentService;
-import com.fluxcache.example.utils.RandomDataUtils;
-import com.fluxcache.example.vo.StudentVO;
+import com.fluxcache.example.service.OrderMultipleKeysProvider;
+import com.fluxcache.example.service.OrderService;
+import com.fluxcache.example.utils.OrderDataUtils;
+import com.fluxcache.example.vo.OrderVO;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,28 +19,28 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class StudentServiceImpl implements StudentService {
+public class OrderServiceImpl implements OrderService {
 
     @Override
-    public List<StudentVO> mockSelectSql() {
+    public List<OrderVO> mockSelectSql() {
         log.info("开始查询数据");
-        List<StudentVO> studentVOS = Lists.newArrayList(new StudentVO(1L, "小奏技术", 18), new StudentVO(2L, "小奏技术1", 19));
-        return studentVOS;
+        List<OrderVO> orderVOS = Lists.newArrayList(new OrderVO(1L, "小奏技术", 18), new OrderVO(2L, "小奏技术1", 19));
+        return orderVOS;
     }
 
     @Override
     @FluxCacheable(
-            cacheName = "multipleKeys",
+            cacheName = "orderMultipleKeys",
             key = "#name",
             refresh = @FluxRefresh(
                     enabled = true,
-                    provider = StudentMultipleKeysProvider.class,
+                    provider = OrderMultipleKeysProvider.class,
                     preheatOnStartup = true,
                     cron = "0 */1 * * * ?" // 1分钟刷新一次
             )
     )
-    public List<StudentVO> multipleKeys(String name) {
+    public List<OrderVO> multipleKeys(String name) {
         log.info("开始查询数据");
-        return RandomDataUtils.randomStudents(name);
+        return OrderDataUtils.randomOrders(name);
     }
 }

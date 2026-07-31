@@ -12,7 +12,7 @@ import java.util.List;
  * @description:
  */
 @Service
-public class StudentProvider implements FluxPreheatDataProvider<String> {
+public class OrderProvider implements FluxPreheatDataProvider<String> {
 
 
     @Override

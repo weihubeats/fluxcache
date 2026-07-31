@@ -1,6 +1,6 @@
 package com.fluxcache.example.service;
 
-import com.fluxcache.example.vo.StudentVO;
+import com.fluxcache.example.vo.OrderVO;
 
 import java.util.List;
 
@@ -9,18 +9,18 @@ import java.util.List;
  * @date : 2025/9/16 14:35
  * @description:
  */
-public interface StudentProviderService {
+public interface OrderProviderService {
 
     /**
      * 测试缓存刷新
      * @return
      */
-    List<StudentVO> testRefreshCache();
+    List<OrderVO> testRefreshCache();
 
 
     /**
      * 测试缓存刷新
      * @return
      */
-    List<StudentVO> refreshCacheByOneParam(String name);
+    List<OrderVO> refreshCacheByOneParam(String name);
 }

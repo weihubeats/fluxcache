@@ -12,7 +12,7 @@ import java.util.Collection;
  * @description:
  */
 @Service
-public class StudentMultipleKeysProvider implements FluxPreheatDataProvider<String> {
+public class OrderMultipleKeysProvider implements FluxPreheatDataProvider<String> {
 
     public static final String KEY = "xiaozou";
 

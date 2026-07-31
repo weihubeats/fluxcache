@@ -2,7 +2,7 @@ package com.fluxcache.example.config;
 
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;
-import com.fluxcache.example.utils.RandomDataUtils;
+import com.fluxcache.example.utils.OrderDataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ManuallyRefreshCache implements ApplicationListener<ContextRefreshedEvent> {
+public class OrderManuallyRefreshCache implements ApplicationListener<ContextRefreshedEvent> {
 
     private final FluxCacheManager cacheManager;
 
@@ -31,8 +31,8 @@ public class ManuallyRefreshCache implements ApplicationListener<ContextRefreshe
 
         new Thread(() -> {
             while (true) {
-                FluxCache<Object, Object> cache = cacheManager.getCache(MyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
-                cache.put(KEY, RandomDataUtils.randomStudents());
+                FluxCache<Object, Object> cache = cacheManager.getCache(OrderMyFluxCacheDataRegistered.PRODUCT_MANUAL_MultiLevel_CACHE);
+                cache.put(KEY, OrderDataUtils.randomOrders());
                 try {
                     TimeUnit.SECONDS.sleep(2);
                 } catch (InterruptedException e) {
