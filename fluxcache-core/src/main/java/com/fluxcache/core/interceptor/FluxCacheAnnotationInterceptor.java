@@ -292,23 +292,26 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
     /* ------------------ CachePut ------------------ */
 
     private Object handlePut(FluxCacheOperationInvoker invoker,
-                             FluxCache cache,
-                             String key,
-                             FluxCacheOperation op, Method method) {
+                              FluxCache cache,
+                              String key,
+                              FluxCacheOperation op, Method method) {
         long begin = System.nanoTime();
         Object result = invoker.invoke();
         long loadMs = (System.nanoTime() - begin) / 1_000_000;
         Object cacheValue = unwrapResult(result);
-        cache.put(key, cacheValue);
-        publish(op.getCacheName(), MonitorEventEnum.CACHE_PUT, key, 1, loadMs, false);
 
-/*        if (shouldCacheValue(cacheValue, cacheProperties.isAllowCacheNull(), cacheProperties.isAllowCacheEmptyOptional())) {
+        if (shouldCacheValue(cacheValue, cacheProperties.isAllowCacheNull(),
+                cacheProperties.isAllowCacheEmptyOptional())) {
             cache.put(key, cacheValue);
-//            cacheMonitor.recordPut(op.getCacheName(), key);
+            publish(op.getCacheName(), MonitorEventEnum.CACHE_PUT, key, 1, loadMs, false);
             if (log.isDebugEnabled()) {
                 log.debug("[FluxCache] PUT (CachePut) cache={} key={}", op.getCacheName(), key);
             }
-        }*/
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("[FluxCache] SKIP_PUT (CachePut, value policy) cache={} key={}", op.getCacheName(), key);
+            }
+        }
         return adaptOptionalReturn(method, cacheValue);
     }
 

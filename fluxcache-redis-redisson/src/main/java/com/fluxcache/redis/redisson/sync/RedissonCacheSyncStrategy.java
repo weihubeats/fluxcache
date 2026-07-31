@@ -56,7 +56,7 @@ public class RedissonCacheSyncStrategy implements CacheSyncStrategy {
 
     private void postProcess(AbstractLocalCacheDTO abstractLocalCacheDTO) {
         if (ObjectUtils.isNotEmpty(this.cacheSyncPostProcessors)) {
-            this.cacheSyncPostProcessors.forEach(p -> p.postProcessAfterClear(abstractLocalCacheDTO));
+            this.cacheSyncPostProcessors.forEach(p -> p.postProcess(abstractLocalCacheDTO));
         }
     }
 }

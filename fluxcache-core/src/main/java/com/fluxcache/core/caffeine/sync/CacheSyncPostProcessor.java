@@ -10,6 +10,6 @@ import com.fluxcache.core.model.AbstractLocalCacheDTO;
 public interface CacheSyncPostProcessor {
 
 
-    void postProcessAfterClear(AbstractLocalCacheDTO abstractLocalCacheDTO);
+    void postProcess(AbstractLocalCacheDTO abstractLocalCacheDTO);
 
 }
