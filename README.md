@@ -1,6 +1,8 @@
 # fluxcache
 多级缓存框架 (multilevel cache framework)
 
+A lightweight multilevel cache framework for Spring Boot applications. Supports Caffeine L1 and Redis L2 cache with cache penetration/breakdown/avalanche protection, distributed cache invalidation via Pub/Sub, single-flight cache loading, and a built-in cache management dashboard. Annotate-based usage, compatible with Spring Data Redis and Redisson.
+
 ## 特性
 
 - 自定义一级 / 二级缓存
@@ -23,15 +25,16 @@
 
 ## 模块
 
-| 模块 | 说明 |
-|------|------|
-| `fluxcache-core` | 核心引擎与抽象（无 Redis 客户端依赖） |
-| `fluxcache-redis-spring` | Spring Data Redis 实现（`REDIS`） |
-| `fluxcache-redis-redisson` | Redisson 实现（`REDIS` + `REDIS_MAP`），**不依赖** spring-data-redis |
-| `fluxcache-admin` | Dashboard REST |
-| `fluxcache-all-spring-boot-starter` | 默认入口：`redis-spring` + `admin` |
-| `fluxcache-example-starter` | starter 用法示例 |
-| `fluxcache-example-redisson` | 仅 Redisson 用法示例 |
+```
+fluxcache
+├── fluxcache-core                          核心引擎与抽象（无 Redis 客户端依赖）
+├── flux-cache-spring-boot-starter/         Spring Boot Starter 父模块
+│   ├── fluxcache-redis-spring              Spring Data Redis 实现（REDIS）
+│   ├── fluxcache-redis-redisson            Redisson 实现（REDIS + REDIS_MAP），不依赖 spring-data-redis
+│   ├── fluxcache-admin                     Dashboard REST
+│   └── fluxcache-all-spring-boot-starter   默认入口：redis-spring + admin
+└── fluxcache-example/                      示例项目
+```
 
 ## 使用
 
@@ -46,7 +49,7 @@
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
 </dependency>
 ```
 
@@ -60,12 +63,12 @@ Spring Boot 3 请使用 `spring-boot-3.x` 分支上的 `3.0.0` 版本。
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-redis-redisson</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
 </dependency>
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-admin</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
 </dependency>
 ```
 

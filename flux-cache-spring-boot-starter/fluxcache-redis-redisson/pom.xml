@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.weihubeats</groupId>
+        <artifactId>flux-cache-spring-boot-starter</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>fluxcache-redis-redisson</artifactId>
+    <name>fluxcache-redis-redisson</name>
+    <description>FluxCache Redis implementation based on Redisson (standalone, no spring-data-redis)</description>
+    <url>https://github.com/weihubeats/fluxcache</url>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>weihubeats</name>
+            <email>weihubeats@163.com</email>
+            <organization>https://weihubeats.blog.csdn.net/</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git@github.com:weihubeats/fluxcache.git</connection>
+        <developerConnection>scm:git@github.com:weihubeats/fluxcache.git</developerConnection>
+        <url>git@github.com:weihubeats/fluxcache.git</url>
+    </scm>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.weihubeats</groupId>
+            <artifactId>fluxcache-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

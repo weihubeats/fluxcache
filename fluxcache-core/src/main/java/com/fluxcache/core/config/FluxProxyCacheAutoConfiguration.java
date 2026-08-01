@@ -34,6 +34,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy;
+import java.util.Map;
 
 /**
  * @author : wh
@@ -121,5 +122,11 @@ public class FluxProxyCacheAutoConfiguration {
         scheduler.setThreadNamePrefix("flux-cache-refresh-");
         scheduler.setDaemon(true);
         return scheduler;
+    }
+
+    @Bean
+    public FluxCacheWarmUpRunner fluxCacheWarmUpRunner(FluxCacheProperties properties,
+                                                        Map<String, Object> beanMap) {
+        return new FluxCacheWarmUpRunner(properties, beanMap);
     }
 }

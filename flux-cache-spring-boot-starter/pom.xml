@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.weihubeats</groupId>
+        <artifactId>fluxcache</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>flux-cache-spring-boot-starter</artifactId>
+    <packaging>pom</packaging>
+    <name>flux cache spring boot starter</name>
+    <description>FluxCache Spring Boot starter parent module</description>
+    <url>https://github.com/weihubeats/fluxcache</url>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>weihubeats</name>
+            <email>weihubeats@163.com</email>
+            <organization>https://weihubeats.blog.csdn.net/</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git@github.com:weihubeats/fluxcache.git</connection>
+        <developerConnection>scm:git@github.com:weihubeats/fluxcache.git</developerConnection>
+        <url>git@github.com:weihubeats/fluxcache.git</url>
+    </scm>
+
+    <modules>
+        <module>fluxcache-redis-spring</module>
+        <module>fluxcache-redis-redisson</module>
+        <module>fluxcache-admin</module>
+        <module>fluxcache-all-spring-boot-starter</module>
+    </modules>
+
+</project>

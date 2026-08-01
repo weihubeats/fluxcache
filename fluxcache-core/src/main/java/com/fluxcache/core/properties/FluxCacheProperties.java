@@ -49,6 +49,17 @@ public class FluxCacheProperties {
     private boolean asyncMonitorEnable = true;
 
     /**
+     * 是否开启缓存预热：启动后自动调用带缓存注解的方法，生成监控数据。
+     * 仅建议在测试/演示环境开启，生产环境保持关闭。
+     */
+    private boolean warmUpEnable = false;
+
+    /**
+     * 预热延迟秒数（应用启动完成后等待多久开始预热），默认 3 秒。
+     */
+    private int warmUpDelaySeconds = 3;
+
+    /**
      * 是否缓存null
      */
     private boolean allowCacheNull = true;

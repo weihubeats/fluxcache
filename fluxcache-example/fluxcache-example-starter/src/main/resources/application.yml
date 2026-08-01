@@ -16,6 +16,8 @@ flux:
     defaultCacheLevel: FirstCacheable
     asyncMonitorEnable: true
     cacheMonitorEnable: true
+    warmUpEnable: true
+    warmUpDelaySeconds: 5
 
 logging:
   level:

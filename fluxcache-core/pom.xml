@@ -10,6 +10,31 @@
     </parent>
 
     <artifactId>fluxcache-core</artifactId>
+    <name>fluxcache-core</name>
+    <description>FluxCache core module - multi-level caching framework</description>
+    <url>https://github.com/weihubeats/fluxcache</url>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>weihubeats</name>
+            <email>weihubeats@163.com</email>
+            <organization>https://weihubeats.blog.csdn.net/</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git@github.com:weihubeats/fluxcache.git</connection>
+        <developerConnection>scm:git@github.com:weihubeats/fluxcache.git</developerConnection>
+        <url>git@github.com:weihubeats/fluxcache.git</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
