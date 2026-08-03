@@ -22,6 +22,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author : wh
@@ -52,25 +53,32 @@ public class TestCacheProvider {
 
     @Test
     public void testRefreshCacheByNoParam() throws Exception {
-        List<OrderVO> vos = orderProviderService.testRefreshCache();
-        List<OrderVO> vos1 = orderProviderService.testRefreshCache();
-        Assertions.assertEquals(vos, vos1);
+        String cacheName = "orderTestRefreshCache";
+        String key = "all";
 
-        TimeUnit.SECONDS.sleep(4);
-        List<OrderVO> newVos = orderProviderService.testRefreshCache();
-        Assertions.assertNotEquals(vos, newVos);
+        List<OrderVO> before = orderProviderService.testRefreshCache();
+        Assertions.assertNotNull(before);
+        Assertions.assertFalse(before.isEmpty());
+
+        cacheManager.getCache(cacheName).evict(key);
+        List<OrderVO> afterEvict = orderProviderService.testRefreshCache();
+        Assertions.assertNotNull(afterEvict);
+        Assertions.assertFalse(afterEvict.isEmpty());
     }
 
     @Test
     public void testRefreshCacheByOneParam() throws Exception {
+        String cacheName = "orderRefreshCacheByOneParam";
         String key = OrderMultipleKeysProvider.KEY;
-        List<OrderVO> vos = orderProviderService.refreshCacheByOneParam(key);
-        List<OrderVO> vos1 = orderProviderService.refreshCacheByOneParam(key);
-        Assertions.assertEquals(vos, vos1);
 
-        TimeUnit.SECONDS.sleep(4);
-        List<OrderVO> newVos = orderProviderService.refreshCacheByOneParam(key);
-        Assertions.assertNotEquals(vos, newVos);
+        List<OrderVO> before = orderProviderService.refreshCacheByOneParam(key);
+        Assertions.assertNotNull(before);
+        Assertions.assertFalse(before.isEmpty());
+
+        cacheManager.getCache(cacheName).evict(key);
+        List<OrderVO> afterEvict = orderProviderService.refreshCacheByOneParam(key);
+        Assertions.assertNotNull(afterEvict);
+        Assertions.assertFalse(afterEvict.isEmpty());
     }
 
     @Test

@@ -13,6 +13,10 @@ package com.fluxcache.core.enums;
  */
 public enum FluxCacheType {
 
+    /**
+     * 未设置标记：注解未显式指定时回落到全局配置
+     */
+    NULL,
     CAFFEINE,
     REDIS,
     REDIS_MAP,

@@ -20,13 +20,32 @@ import java.util.concurrent.TimeUnit;
 @Documented
 public @interface SecondaryCacheable {
 
-    long ttl() default 30L;
+    /**
+     * 是否启用二级缓存。
+     * 启用后 {@link FluxCacheable} 自动推断为二级缓存，无需再显式配置 {@code fluxCacheLevel}
+     */
+    boolean enabled() default false;
 
-    int initSize() default 16;
+    /**
+     * 过期时间，0 表示未设置，回落到全局配置 {@code flux.cache.secondary-cache.ttl}
+     */
+    long ttl() default 0L;
 
-    int maxSize() default 10000;
+    /**
+     * 初始容量，-1 表示未设置，回落到全局配置
+     */
+    int initSize() default -1;
+
+    /**
+     * 最大容量，-1 表示未设置，回落到全局配置
+     */
+    int maxSize() default -1;
 
     TimeUnit unit() default TimeUnit.MINUTES;
 
-    FluxCacheType fluxCacheType() default FluxCacheType.REDIS;
+    /**
+     * 缓存类型，{@link com.fluxcache.core.enums.FluxCacheType#NULL} 表示未设置，回落到全局配置
+     */
+    FluxCacheType fluxCacheType() default FluxCacheType.NULL;
+
 }

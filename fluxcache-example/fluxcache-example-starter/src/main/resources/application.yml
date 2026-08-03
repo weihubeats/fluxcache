@@ -18,6 +18,18 @@ flux:
     cacheMonitorEnable: true
     warmUpEnable: true
     warmUpDelaySeconds: 5
+    # 一级缓存全局默认，注解未配置时回落到这里
+    first-cache:
+      ttl: 5
+      time-unit: MINUTES
+      cache-type: CAFFEINE
+      init-size: 20
+      max-size: 2000
+    # 二级缓存全局默认
+    secondary-cache:
+      ttl: 5
+      time-unit: MINUTES
+      cache-type: REDIS
 
 logging:
   level:

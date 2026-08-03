@@ -166,6 +166,16 @@ public class FluxCacheProperties {
 
         private FluxCacheType cacheType;
 
+        /**
+         * 初始容量，-1 表示未设置，使用内置默认值 16
+         */
+        private int initSize = -1;
+
+        /**
+         * 最大容量，-1 表示未设置，使用内置默认值 10000
+         */
+        private int maxSize = -1;
+
     }
 
     /**

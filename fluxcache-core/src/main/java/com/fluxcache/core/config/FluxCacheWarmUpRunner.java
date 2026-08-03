@@ -6,6 +6,7 @@ import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 
 import java.lang.reflect.Method;
@@ -33,7 +34,7 @@ public class FluxCacheWarmUpRunner {
     }
 
     @EventListener
-    public void onApplicationReady() {
+    public void onApplicationReady(ApplicationReadyEvent event) {
         if (!properties.isWarmUpEnable()) {
             return;
         }

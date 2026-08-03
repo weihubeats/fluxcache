@@ -20,14 +20,26 @@ import java.util.concurrent.TimeUnit;
 @Documented
 public @interface FirstCacheable {
 
-    long ttl() default 30L;
+    /**
+     * 过期时间，0 表示未设置，回落到全局配置 {@code flux.cache.first-cache.ttl}
+     */
+    long ttl() default 0L;
 
-    int initSize() default 16;
+    /**
+     * 初始容量，-1 表示未设置，回落到全局配置
+     */
+    int initSize() default -1;
 
-    int maxSize() default 10000;
+    /**
+     * 最大容量，-1 表示未设置，回落到全局配置
+     */
+    int maxSize() default -1;
 
     TimeUnit unit() default TimeUnit.MINUTES;
 
-    FluxCacheType fluxCacheType() default FluxCacheType.CAFFEINE;
+    /**
+     * 缓存类型，{@link com.fluxcache.core.enums.FluxCacheType#NULL} 表示未设置，回落到全局配置
+     */
+    FluxCacheType fluxCacheType() default FluxCacheType.NULL;
 
 }

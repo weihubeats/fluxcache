@@ -105,44 +105,67 @@ public RedissonClient redissonClient() {
 - `REDIS`：可移植 Redis KV（Spring Data Redis 或 Redisson Bucket）
 - `REDIS_MAP`：仅 Redisson `RMapCache`（按 entry TTL）
 
-### 注解示例
+### 5. 全局配置（推荐）
 
-一级 Caffeine：
+先在 `application.yml` 中配置一级/二级缓存默认值，大幅减少每个注解上的重复配置：
+
+```yaml
+flux:
+  cache:
+    first-cache:
+      ttl: 5
+      time-unit: MINUTES
+      cache-type: CAFFEINE
+      init-size: 20
+      max-size: 2000
+    secondary-cache:
+      ttl: 5
+      time-unit: MINUTES
+      cache-type: REDIS
+    default-cache-level: FirstCacheable
+```
+
+注解上未显式设置的字段（`ttl <= 0`、`initSize/maxSize <= -1`、`fluxCacheType = NULL`）会自动回落到全局配置。
+
+### 6. 注解示例
+
+**一级缓存（完全使用全局 Caffeine 默认值）：**
 
 ```java
-@FluxCacheable(cacheName = "firstCacheByCaffeine", key = "#name",
-    firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
+@FluxCacheable(cacheName = "firstCacheByCaffeine", key = "#name")
 public List<StudentVO> firstCacheByCaffeine(String name) {
     return mockSelectSql();
 }
 ```
 
-一级 Redis：
+**一级 Redis（仅覆盖缓存类型与 TTL）：**
 
 ```java
-@FluxCacheable(cacheName = "studentRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+@FluxCacheable(cacheName = "studentRedis", key = "#name",
     firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 5L))
 public List<StudentVO> firstCacheByRedis(String name) {
     return mockSelectSql();
 }
 ```
 
-二级：Caffeine + Redis：
+**二级缓存 Caffeine + Redis（仅覆盖 TTL，其余走全局）：**
 
 ```java
-@FluxCacheable(cacheName = "studentLocalRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
-    firstCacheable = @FirstCacheable(ttl = 1L, fluxCacheType = FluxCacheType.CAFFEINE, maxSize = 2000, initSize = 20),
-    secondaryCacheable = @SecondaryCacheable(ttl = 3L, fluxCacheType = FluxCacheType.REDIS))
+@FluxCacheable(cacheName = "studentLocalRedis", key = "#name",
+    firstCacheable = @FirstCacheable(ttl = 1L),
+    secondaryCacheable = @SecondaryCacheable(enabled = true, ttl = 3L))
 public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
     return mockSelectSql();
 }
 ```
 
-### 手动注册缓存
+> 二级缓存通过 `secondaryCacheable.enabled = true` 自动推断，无需显式声明 `fluxCacheLevel`。
+
+### 7. 手动注册缓存
 
 实现 `FluxCacheDataRegistered`，在 `registerCache` 中返回 `FluxMultilevelCacheCacheable` 列表（示例见 example 模块）。
 
-## 缓存刷新
+### 8. 缓存刷新
 
 使用 `@FluxRefresh`（需 Redis 模块提供 `FluxDistributedLock`）：
 

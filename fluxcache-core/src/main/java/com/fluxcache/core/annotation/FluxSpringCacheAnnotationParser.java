@@ -102,12 +102,15 @@ public class FluxSpringCacheAnnotationParser implements FluxCacheAnnotationParse
      * @return
      */
     private FluxCacheOperation parseFluxCacheableAnnotation(AnnotatedElement ae, FluxCacheable ca) {
-        FluxCacheConfig firstCacheConfig = new FluxCacheConfig(ca.firstCacheable());
-        FluxCacheLevel cacheLevel = cacheProperties.fluxCacheLevel(ca.fluxCacheLevel());
-        FluxCacheConfig secondaryCacheable = FluxCacheLevel.isSecondaryCacheable(cacheLevel) ? new FluxCacheConfig(ca.secondaryCacheable()) : null;
+        FluxCacheConfig firstCacheConfig = FluxCacheConfig.from(ca.firstCacheable(), cacheProperties.getFirstCache());
+        FluxCacheLevel cacheLevel = resolveCacheLevel(ca);
+        FluxCacheConfig secondaryCacheConfig = null;
+        if (FluxCacheLevel.isSecondaryCacheable(cacheLevel)) {
+            secondaryCacheConfig = FluxCacheConfig.from(ca.secondaryCacheable(), cacheProperties.getSecondaryCache());
+        }
         FluxCacheOperation fluxCacheOperation = new FluxMultilevelCacheCacheable.Builder()
                 .setFirstCacheConfig(firstCacheConfig)
-                .setSecondaryCacheable(secondaryCacheable)
+                .setSecondaryCacheable(secondaryCacheConfig)
                 .setAllowNullValues(ca.allowCacheNull())
                 .setFluxCacheLevel(cacheLevel)
                 .setCacheName(ca.cacheName())
@@ -115,6 +118,17 @@ public class FluxSpringCacheAnnotationParser implements FluxCacheAnnotationParse
                 .setKey(ca.key())
                 .build();
         return fluxCacheOperation;
+    }
+
+    /**
+     * 解析缓存级别：{@link SecondaryCacheable#enabled()} 为 true 推断为二级缓存，
+     * 否则回落到全局 {@link FluxCacheProperties#getDefaultCacheLevel()}。
+     */
+    private FluxCacheLevel resolveCacheLevel(FluxCacheable ca) {
+        if (ca.secondaryCacheable().enabled()) {
+            return FluxCacheLevel.SecondaryCacheable;
+        }
+        return cacheProperties.fluxCacheLevel(FluxCacheLevel.NULL);
     }
 
     /**

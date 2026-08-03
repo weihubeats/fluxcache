@@ -9,7 +9,6 @@ import com.fluxcache.core.annotation.FluxCacheEvict;
 import com.fluxcache.core.annotation.FluxCachePut;
 import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.annotation.SecondaryCacheable;
-import com.fluxcache.core.enums.FluxCacheLevel;
 import com.fluxcache.core.enums.FluxCacheType;
 import com.fluxcache.example.config.OrderMyFluxCacheDataRegistered;
 import com.fluxcache.example.vo.OrderVO;
@@ -66,8 +65,7 @@ public class TestOrderController {
     }
 
     @GetMapping("/test")
-    @FluxCacheable(cacheName = "orderCacheByCaffeine", key = "#name",
-        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
+    @FluxCacheable(cacheName = "orderCacheByCaffeine", key = "#name")
     public List<OrderVO> firstCacheByCaffeine(String name) {
         return mockSelectSql();
     }
@@ -79,8 +77,7 @@ public class TestOrderController {
      * @return
      */
     @GetMapping("/firstCacheByCaffeineAndOptional")
-    @FluxCacheable(cacheName = "orderCacheByCaffeineAndOptional", key = "#name",
-        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
+    @FluxCacheable(cacheName = "orderCacheByCaffeineAndOptional", key = "#name")
     public Optional<List<OrderVO>> firstCacheByCaffeineAndOptional(String name) {
         return mockSelectSqlAndOptional();
     }
@@ -92,21 +89,21 @@ public class TestOrderController {
     }
 
     @GetMapping("/redis")
-    @FluxCacheable(cacheName = "orderRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+    @FluxCacheable(cacheName = "orderRedis", key = "#name",
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 5L))
     public List<OrderVO> firstCacheByRedis(String name) {
         return mockSelectSql();
     }
 
     @GetMapping("/redis-bucket")
-    @FluxCacheable(cacheName = "orderRedisBucket", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+    @FluxCacheable(cacheName = "orderRedisBucket", key = "#name",
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 1L))
     public List<OrderVO> firstCacheByRedisBucket(String name) {
         return mockSelectSql();
     }
 
     @GetMapping("/redis-bucket-null")
-    @FluxCacheable(cacheName = "orderRedisBucketNull", key = "#name", fluxCacheLevel = FluxCacheLevel.FirstCacheable,
+    @FluxCacheable(cacheName = "orderRedisBucketNull", key = "#name",
         firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.REDIS, ttl = 1L))
     public List<OrderVO> firstNullCacheByRedisBucket(String name) {
         System.out.println("开始查询数据库");
@@ -168,17 +165,15 @@ public class TestOrderController {
      * @return
      */
     @GetMapping("/local-redis")
-    @FluxCacheable(cacheName = "orderLocalRedis", key = "#name", fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
-        firstCacheable = @FirstCacheable(ttl = 1L, fluxCacheType = FluxCacheType.CAFFEINE, maxSize = 2000, initSize = 20),
-        secondaryCacheable = @SecondaryCacheable(ttl = 3L, fluxCacheType = FluxCacheType.REDIS))
+    @FluxCacheable(cacheName = "orderLocalRedis", key = "#name",
+        firstCacheable = @FirstCacheable(ttl = 1L),
+        secondaryCacheable = @SecondaryCacheable(enabled = true, ttl = 3L))
     public List<OrderVO> secondaryCacheByCaffeineRedis(String name) {
         return mockSelectSql();
     }
 
     @GetMapping("/test-null-firstCache")
-    @FluxCacheable(cacheName = "orderTestNullFirstCache", key = "#name",
-        fluxCacheLevel = FluxCacheLevel.FirstCacheable,
-        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
+    @FluxCacheable(cacheName = "orderTestNullFirstCache", key = "#name")
     public List<OrderVO> mockSelectSqlToNullByFirstCache(String name) {
         return mockSelectSqlToNull();
     }
@@ -189,25 +184,20 @@ public class TestOrderController {
      * @return
      */
     @GetMapping("/test-no-null-firstCache")
-    @FluxCacheable(cacheName = "orderTestNoNullFirstCache", key = "#name",
-        fluxCacheLevel = FluxCacheLevel.FirstCacheable,
-        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20), allowCacheNull = false)
+    @FluxCacheable(cacheName = "orderTestNoNullFirstCache", key = "#name", allowCacheNull = false)
     public List<OrderVO> mockSelectSqlToNoNullByFirstCache(String name) {
         return mockSelectSqlToNull();
     }
 
     @GetMapping("/test-null-secondaryCache")
     @FluxCacheable(cacheName = "orderTestNullSecondaryCache", key = "#name",
-        fluxCacheLevel = FluxCacheLevel.SecondaryCacheable,
-        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20),
-        secondaryCacheable = @SecondaryCacheable(ttl = 5L, fluxCacheType = FluxCacheType.REDIS))
+        secondaryCacheable = @SecondaryCacheable(enabled = true, ttl = 5L))
     public List<OrderVO> mockSelectSqlToNullBySecondaryCache(String name) {
         return mockSelectSqlToNull();
     }
 
     @GetMapping("/test-null")
-    @FluxCacheable(cacheName = "orderTestNull", key = "#name",
-        firstCacheable = @FirstCacheable(fluxCacheType = FluxCacheType.CAFFEINE, ttl = 5L, unit = TimeUnit.MINUTES, maxSize = 2000, initSize = 20))
+    @FluxCacheable(cacheName = "orderTestNull", key = "#name")
     public List<OrderVO> mockSelectSqlToNull(String name) {
         return mockSelectSqlToNull();
     }

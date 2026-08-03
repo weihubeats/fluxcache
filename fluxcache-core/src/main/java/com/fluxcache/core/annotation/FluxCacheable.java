@@ -1,6 +1,5 @@
 package com.fluxcache.core.annotation;
 
-import com.fluxcache.core.enums.FluxCacheLevel;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -36,12 +35,6 @@ public @interface FluxCacheable {
 
 
     SecondaryCacheable secondaryCacheable() default @SecondaryCacheable();
-
-    /**
-     * 缓存级别 一级缓存 二级缓存
-     * @return
-     */
-    FluxCacheLevel fluxCacheLevel() default FluxCacheLevel.NULL;
 
     /**
      * 配置缓存定时刷新功能
