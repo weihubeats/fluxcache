@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build & Test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [11, 17]
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build & run unit + integration tests
+        run: mvn verify -B -Dgpg.skip=true
+
+      - name: Upload JaCoCo report
+        if: matrix.java == '11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: fluxcache-core/target/site/jacoco/
+
+      - name: Upload coverage to Codecov
+        if: matrix.java == '11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: fluxcache-core/target/site/jacoco/jacoco.xml
+          fail_ci_if_error: true
+          verbose: true

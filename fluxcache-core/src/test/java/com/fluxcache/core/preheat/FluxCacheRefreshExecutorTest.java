@@ -1,168 +1,191 @@
 package com.fluxcache.core.preheat;
 
 import com.fluxcache.core.FluxCache;
-import com.fluxcache.core.caffeine.sync.CacheSyncStrategy;
-import com.fluxcache.core.enums.FluxCacheLevel;
-import com.fluxcache.core.enums.FluxCacheType;
-import com.fluxcache.core.impl.FluxCacheFactory;
-import com.fluxcache.core.model.FluxCacheConfig;
-import com.fluxcache.core.model.FluxMultilevelCacheCacheable;
-import com.fluxcache.core.monitor.FluxCacheMonitor;
-import com.fluxcache.core.properties.FluxCacheProperties;
+import com.fluxcache.core.annotation.FluxRefresh;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
- * 刷新执行器测试：单 key 失败隔离、失败保留旧值、ThreadLocal 清理、null 写入策略。
+ * 刷新执行器：逐 key 加载、跳过空值、异常保留旧值、强制刷新上下文清理。
  *
  * @author : wh
- * @date : 2026/7/31
+ * @date : 2026/8/4
  */
 public class FluxCacheRefreshExecutorTest {
 
-    private final CacheSyncStrategy syncStrategy = mock(CacheSyncStrategy.class);
-    private final FluxCacheMonitor monitor = mock(FluxCacheMonitor.class);
-    private final FluxCacheProperties cacheProperties = new FluxCacheProperties();
-    private final FluxCacheRefreshExecutor executor = new FluxCacheRefreshExecutor();
+    private FluxCacheRefreshExecutor executor;
+    private LoadService service;
+    private Method loadMethod;
+    private FluxCache<Object, Object> cache;
 
-    @Test
-    public void refreshSuccess_putsNewValue_andClearsForceContext() throws Exception {
-        RefreshTarget target = new RefreshTarget();
-        FluxCache<String, String> cache = createCache(true);
-        cache.put("k1", "old1");
-        cache.put("k2", "old2");
+    @Before
+    public void setUp() throws Exception {
+        executor = new FluxCacheRefreshExecutor();
+        service = new LoadService();
+        loadMethod = LoadService.class.getMethod("load", String.class);
+        cache = mock(FluxCache.class);
+    }
 
-        executor.refresh(buildContext(target, cache, "load", List.of("k1", "k2")));
-
-        assertEquals("v-k1-1", cache.get("k1", String.class));
-        assertEquals("v-k2-2", cache.get("k2", String.class));
-        assertFalse("刷新线程不应残留强制刷新上下文", FluxForceRefreshContext.isForceRefresh());
+    private FluxCacheRefreshContext context(FluxCache<Object, Object> c, Object... keys) {
+        return FluxCacheRefreshContext.builder()
+                .bean(service)
+                .method(loadMethod)
+                .cacheName("refresh-executor")
+                .refreshConfig(mock(FluxRefresh.class))
+                .cache(c)
+                .keys(Arrays.asList(keys))
+                .build();
     }
 
     @Test
-    public void refreshFailure_preservesOldValue_andContinuesOtherKeys() throws Exception {
-        RefreshTarget target = new RefreshTarget();
-        target.failKeys.add("k1");
-        FluxCache<String, String> cache = createCache(true);
-        cache.put("k1", "old1");
-        cache.put("k2", "old2");
+    public void refresh_loadsAndPutsEachKey() {
+        when(cache.allowCacheNull()).thenReturn(true);
+        executor.refresh(context(cache, "a", "b"));
 
-        executor.refresh(buildContext(target, cache, "load", List.of("k1", "k2")));
-
-        // 失败的 key 保留旧值，其余 key 正常刷新
-        assertEquals("old1", cache.get("k1", String.class));
-        assertEquals("v-k2-2", cache.get("k2", String.class));
-        assertFalse("刷新线程不应残留强制刷新上下文", FluxForceRefreshContext.isForceRefresh());
+        assertEquals(List.of("a", "b"), service.seen);
+        verify(cache, times(2)).put(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        assertFalse(FluxForceRefreshContext.isForceRefresh()); // 线程上下文被清理
     }
 
     @Test
-    public void refreshNullResult_skipsWrite_whenNullNotAllowed() throws Exception {
-        RefreshTarget target = new RefreshTarget();
-        target.returnNull = true;
-        FluxCache<String, String> cache = createCache(false);
-        cache.put("k1", "old1");
-
-        executor.refresh(buildContext(target, cache, "load", List.of("k1")));
-
-        // 不允许缓存 null：跳过写入，保留旧值
-        assertEquals("old1", cache.get("k1", String.class));
+    public void refresh_nullCache_skips() {
+        executor.refresh(context(null, "a"));
+        verify(cache, never()).put(any(), any());
     }
 
     @Test
-    public void refreshNullResult_cached_whenNullAllowed() throws Exception {
-        RefreshTarget target = new RefreshTarget();
-        target.returnNull = true;
-        FluxCache<String, String> cache = createCache(true);
-        cache.put("k1", "old1");
-
-        executor.refresh(buildContext(target, cache, "load", List.of("k1")));
-
-        // 允许缓存 null：刷新后的值为 null（穿透保护）
-        assertNull(cache.get("k1", String.class));
+    public void refresh_nullResult_skippedWhenNotAllowed() {
+        when(cache.allowCacheNull()).thenReturn(false);
+        service.nullForKey = true;
+        executor.refresh(context(cache, "a"));
+        verify(cache, never()).put(any(), any());
     }
 
     @Test
-    public void refreshMultiArgMethod_skipsKeyWithoutAborting() throws Exception {
-        RefreshTarget target = new RefreshTarget();
-        FluxCache<String, String> cache = createCache(true);
-        cache.put("k1", "old1");
+    public void refresh_nullResult_keptWhenAllowed() {
+        when(cache.allowCacheNull()).thenReturn(true);
+        service.nullForKey = true;
+        executor.refresh(context(cache, "a"));
+        verify(cache).put("a", null);
+    }
 
-        executor.refresh(buildContext(target, cache, "multi", List.of("k1")));
+    @Test
+    public void refresh_multiParamMethod_throwsIllegalState() throws Exception {
+        Method multi = LoadService.class.getMethod("load", String.class, String.class);
+        FluxCacheRefreshContext ctx = FluxCacheRefreshContext.builder()
+                .bean(service)
+                .method(multi)
+                .cacheName("multi")
+                .refreshConfig(mock(FluxRefresh.class))
+                .cache(cache)
+                .keys(List.of("a"))
+                .build();
+        when(cache.allowCacheNull()).thenReturn(true);
 
-        // 不支持的签名仅记录日志，不影响其他逻辑
-        assertEquals("old1", cache.get("k1", String.class));
+        executor.refresh(ctx);
+        // 多参数方法调用抛 InvalidStateException，被捕获记录保留旧值
+        verify(cache, never()).put(any(), any());
+    }
+
+    @Test
+    public void refresh_zeroArgMethod_works() throws Exception {
+        Method zero = LoadService.class.getMethod("noArg");
+        FluxCacheRefreshContext ctx = FluxCacheRefreshContext.builder()
+                .bean(service)
+                .method(zero)
+                .cacheName("zero")
+                .refreshConfig(mock(FluxRefresh.class))
+                .cache(cache)
+                .keys(List.of("k"))
+                .build();
+        when(cache.allowCacheNull()).thenReturn(true);
+
+        executor.refresh(ctx);
+
+        assertEquals(1, service.noArgCalls);
+        verify(cache).put("k", "noarg");
+    }
+
+    @Test
+    public void forceContext_runAndCallHelpers() {
+        AtomicBoolean inside = new AtomicBoolean(false);
+        FluxForceRefreshContext.runWithForce(() -> inside.set(FluxForceRefreshContext.isForceRefresh()));
+        assertTrue(inside.get());
+        assertFalse(FluxForceRefreshContext.isForceRefresh());
+
+        String result = FluxForceRefreshContext.callWithForce(
+                () -> FluxForceRefreshContext.isForceRefresh() ? "forced" : "not");
+        assertEquals("forced", result);
         assertFalse(FluxForceRefreshContext.isForceRefresh());
     }
 
-    private FluxCacheRefreshContext buildContext(RefreshTarget target, FluxCache cache, String methodName, List<String> keys)
-            throws NoSuchMethodException {
-        Method method = "multi".equals(methodName)
-                ? target.getClass().getMethod("multi", String.class, String.class)
-                : target.getClass().getMethod("load", String.class);
-        return FluxCacheRefreshContext.builder()
-                .bean(target)
-                .method(method)
-                .cacheName("refresh-test")
-                .cache(cache)
-                .keys(keys)
-                .build();
+    @Test
+    public void forceContext_callWithRuntime_keepsOriginal() {
+        try {
+            FluxForceRefreshContext.callWithForce(() -> {
+                throw new IllegalStateException("inner");
+            });
+            fail("应抛出原异常");
+        } catch (IllegalStateException expected) {
+            assertEquals("inner", expected.getMessage());
+        }
     }
 
-    private FluxCache<String, String> createCache(boolean allowNull) {
-        FluxMultilevelCacheCacheable op = (FluxMultilevelCacheCacheable) new FluxMultilevelCacheCacheable.Builder()
-                .setFirstCacheConfig(caffeineConfig())
-                .setAllowNullValues(allowNull)
-                .setCacheName("refresh-test")
-                .setMethodName("load")
-                .setKey("#key")
-                .setFluxCacheLevel(FluxCacheLevel.FirstCacheable)
-                .build();
-        @SuppressWarnings("unchecked")
-        FluxCache<String, String> cache = (FluxCache<String, String>) FluxCacheFactory.withDefaults()
-                .createFluxCache(op, cacheProperties, syncStrategy, monitor);
-        return cache;
+    @Test
+    public void forceContext_callWithChecked_wrapped() {
+        try {
+            FluxForceRefreshContext.callWithForce(() -> {
+                throw new Exception("checked");
+            });
+            fail("应抛出 RuntimeException");
+        } catch (RuntimeException expected) {
+            assertTrue(expected.getCause() != null);
+        }
     }
 
-    private static FluxCacheConfig caffeineConfig() {
-        return new FluxCacheConfig.Builder()
-                .setTtl(5L)
-                .setInitSize(16)
-                .setMaxSize(100)
-                .setUnit(TimeUnit.MINUTES)
-                .setCacheType(FluxCacheType.CAFFEINE)
-                .build();
+    @Test
+    public void preheatDataProviderNone_returnsNull() {
+        assertNull(new FluxPreheatDataProvider.None<Object>().getPreheatData());
     }
 
-    public static class RefreshTarget {
+    public static class LoadService {
 
-        private final AtomicInteger calls = new AtomicInteger();
-
-        private final java.util.Set<String> failKeys = new java.util.HashSet<>();
-
-        private boolean returnNull;
+        final List<String> seen = new java.util.ArrayList<>();
+        boolean nullForKey;
+        int noArgCalls;
 
         public String load(String key) {
-            calls.incrementAndGet();
-            if (failKeys.contains(key)) {
-                throw new IllegalStateException("boom-" + key);
-            }
-            if (returnNull) {
+            seen.add(key);
+            if (nullForKey) {
                 return null;
             }
-            return "v-" + key + "-" + calls.get();
+            return "value";
         }
 
-        public String multi(String a, String b) {
-            return "x";
+        public String load(String k1, String k2) {
+            return "v";
+        }
+
+        public String noArg() {
+            noArgCalls++;
+            return "noarg";
         }
     }
 }

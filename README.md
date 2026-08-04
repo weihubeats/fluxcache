@@ -1,4 +1,8 @@
 # fluxcache
+
+[![CI](https://github.com/weihubeats/fluxcache/actions/workflows/ci.yml/badge.svg)](https://github.com/weihubeats/fluxcache/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/weihubeats/fluxcache/branch/main/graph/badge.svg)](https://codecov.io/gh/weihubeats/fluxcache)
+
 多级缓存框架 (multilevel cache framework)
 
 A lightweight multilevel cache framework for Spring Boot applications. Supports Caffeine L1 and Redis L2 cache with cache penetration/breakdown/avalanche protection, distributed cache invalidation via Pub/Sub, single-flight cache loading, and a built-in cache management dashboard. Annotate-based usage, compatible with Spring Data Redis and Redisson.
@@ -187,3 +191,30 @@ public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
 ## Dashboard
 
 引入 starter（含 admin）后访问管理端能力；前端见 `fluxcache-dashboard`
+
+## 基准测试（Benchmark）
+
+`fluxcache-benchmark` 基于 JMH，对比 FluxCache 与 Spring Caffeine Cache 的吞吐/延迟，及单飞（single-flight）防击穿效果。默认不参与构建，需激活 profile：
+
+运行：
+
+```bash
+# 方式一：直接运行脚本（编译 + 生成 JSON 结果到 docs/benchmark/）
+./fluxcache-benchmark/run-benchmark.sh
+
+# 方式二：仅构建，手动指定类与参数
+mvn clean package -Pbenchmark -Dgpg.skip=true
+java -jar fluxcache-benchmark/target/benchmarks.jar FluxCacheLatencyBenchmark -rf json
+```
+
+主要场景：
+
+- `FluxCacheThroughputBenchmark`：FluxCache vs Spring Caffeine 本地缓存吞吐
+- `FluxCacheLatencyBenchmark`：FluxCache（含 L1/L2）vs 纯 Redis vs Spring Caffeine 延迟对比
+- `SingleFlightPenetrationBenchmark`：并发缓存穿透时开启/关闭单飞的命中与耗时对比
+
+结果写入 `docs/benchmark/results.json`（JMH JSON 汇总）。
+
+## 质量门禁
+
+CI（`mvn verify`）内置 JaCoCo 覆盖率检查：`fluxcache-core` 行覆盖率 ≥ 80%、分支覆盖率 ≥ 80%，不达标构建失败。覆盖率报告见 `fluxcache-core/target/site/jacoco/`，并上报 Codecov。

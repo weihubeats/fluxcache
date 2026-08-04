@@ -78,7 +78,7 @@ public class FluxCacheWarmUpRunner {
     private List<Method> collectCacheMethods() {
         List<Method> result = new ArrayList<>();
         for (Object bean : beanMap.values()) {
-            Class<?> clazz = AopUtils.getTargetClass(bean.getClass());
+            Class<?> clazz = AopUtils.getTargetClass(bean);
             for (Method method : clazz.getDeclaredMethods()) {
                 if (hasCacheAnnotation(method)) {
                     result.add(method);
@@ -147,7 +147,7 @@ public class FluxCacheWarmUpRunner {
 
     private Object findBean(Class<?> clazz) {
         for (Object bean : beanMap.values()) {
-            if (bean != null && clazz.isAssignableFrom(AopUtils.getTargetClass(bean.getClass()))) {
+            if (bean != null && clazz.isAssignableFrom(AopUtils.getTargetClass(bean))) {
                 return bean;
             }
         }
