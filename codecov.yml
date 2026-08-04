@@ -1,0 +1,19 @@
+# Codecov 配置
+# fluxcache-core 覆盖率以 JaCoCo 聚合口径为准（LINE/BRANCH ≥ 85% 已在 Maven 门禁强制）。
+# Codecov 按"文件平均"计算，纯接口/注解/常量类无可执行代码，会被按 0% 计入拖低比例，因此忽略。
+
+ignore:
+  - "fluxcache-core/src/main/java/com/fluxcache/core/annotation/**"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/constants/**"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/interceptor/FluxCacheErrorHandler.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/spi/FluxCacheCreator.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/spi/FluxCacheCreateContext.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/monitor/FluxCacheMonitor.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/caffeine/sync/CacheSyncStrategy.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/caffeine/sync/CacheSyncPostProcessor.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/lock/FluxDistributedLock.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/manual/FluxCacheDataRegistered.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/preheat/FluxCacheRefreshContext.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/config/FluxKeyGenerator.java"
+
+comment: false
