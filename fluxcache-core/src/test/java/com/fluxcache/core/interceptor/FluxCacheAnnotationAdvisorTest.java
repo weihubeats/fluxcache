@@ -17,6 +17,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -48,6 +49,26 @@ public class FluxCacheAnnotationAdvisorTest {
     }
 
     @Test
+    public void constructor_nullAdvice_throws() {
+        try {
+            new FluxCacheAnnotationAdvisor(null, FluxCacheable.class);
+            fail("应抛出 NullPointerException");
+        } catch (NullPointerException expected) {
+            // @NonNull 校验
+        }
+    }
+
+    @Test
+    public void constructor_nullAnnotation_throws() {
+        try {
+            new FluxCacheAnnotationAdvisor(interceptor, null);
+            fail("应抛出 NullPointerException");
+        } catch (NullPointerException expected) {
+            // @NonNull 校验
+        }
+    }
+
+    @Test
     public void matchesAnnotatedMethod() throws Exception {
         Method m = AnnotatedService.class.getMethod("load", String.class);
         assertTrue(matcher.matches(m, AnnotatedService.class));
@@ -74,6 +95,12 @@ public class FluxCacheAnnotationAdvisorTest {
     }
 
     @Test
+    public void interfaceMethod_bothUnannotated_returnsFalse() throws Exception {
+        Method iface = PlainInterface.class.getMethod("get", String.class);
+        assertFalse(matcher.matches(iface, PlainImpl.class));
+    }
+
+    @Test
     public void setBeanFactory_propagatesToAwareAdvice() {
         BeanFactoryAwareInterceptor aware = new BeanFactoryAwareInterceptor();
         FluxCacheAnnotationAdvisor a = new FluxCacheAnnotationAdvisor(aware, FluxCacheable.class);
@@ -92,6 +119,14 @@ public class FluxCacheAnnotationAdvisorTest {
     public interface PlainInterface {
 
         String get(String key);
+    }
+
+    public static class PlainImpl implements PlainInterface {
+
+        @Override
+        public String get(String key) {
+            return key;
+        }
     }
 
     public interface AnnotatedInterface {

@@ -228,7 +228,7 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
         Object cacheValue = unwrapResult(result);
 
         // 按策略决定是否缓存 null / Optional.empty
-        if (shouldCacheValue(cacheValue, allowCacheNull, allowEmptyOptional)) {
+        if (shouldCacheValue(cacheValue, allowCacheNull)) {
             cache.put(key, cacheValue);
             publish(op.getCacheName(), MonitorEventEnum.CACHE_PUT, key, 1, loadMs, force);
             if (log.isDebugEnabled()) {
@@ -300,8 +300,7 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
         long loadMs = (System.nanoTime() - begin) / 1_000_000;
         Object cacheValue = unwrapResult(result);
 
-        if (shouldCacheValue(cacheValue, cacheProperties.isAllowCacheNull(),
-                cacheProperties.isAllowCacheEmptyOptional())) {
+        if (shouldCacheValue(cacheValue, cacheProperties.isAllowCacheNull())) {
             cache.put(key, cacheValue);
             publish(op.getCacheName(), MonitorEventEnum.CACHE_PUT, key, 1, loadMs, false);
             if (log.isDebugEnabled()) {
@@ -327,17 +326,8 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
         return ObjectUtils.unwrapOptional(result);
     }
 
-    private boolean shouldCacheValue(Object cacheValue,
-                                     boolean allowNull,
-                                     boolean allowEmptyOptional) {
-        if (cacheValue == null) {
-            return allowNull;
-        }
-        if (cacheValue instanceof Optional<?>) {
-            Optional<?> opt = (Optional<?>) cacheValue;
-            return opt.isPresent() || allowEmptyOptional;
-        }
-        return true;
+    private boolean shouldCacheValue(Object cacheValue, boolean allowNull) {
+        return cacheValue != null || allowNull;
     }
 
     private String resolveKey(FluxCacheOperationContexts contexts) {

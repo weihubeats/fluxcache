@@ -59,6 +59,16 @@ public class FluxCacheCreatePostProcessTest {
     }
 
     @Test
+    public void afterSingletonsInstantiated_nullRegistered_noop() {
+        FluxCacheCreatePostProcess postProcess =
+                new FluxCacheCreatePostProcess(null, cacheManager, properties, cacheMonitor);
+
+        postProcess.afterSingletonsInstantiated();
+
+        verify(cacheManager, never()).createCache(any());
+    }
+
+    @Test
     public void afterSingletonsInstantiated_monitorDisabled_noStatics() {
         properties.setCacheMonitorEnable(false);
         FluxCacheDataRegistered registered = () -> List.of(operation("a"));

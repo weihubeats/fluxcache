@@ -124,6 +124,25 @@ public class FluxCacheRefreshExecutorTest {
     }
 
     @Test
+    public void refresh_loaderWrappedException_keepsOtherKeys() throws Exception {
+        Method fail = LoadService.class.getMethod("fail", String.class);
+        FluxCacheRefreshContext ctx = FluxCacheRefreshContext.builder()
+                .bean(service)
+                .method(fail)
+                .cacheName("fail")
+                .refreshConfig(mock(FluxRefresh.class))
+                .cache(cache)
+                .keys(List.of("boom", "ok"))
+                .build();
+        when(cache.allowCacheNull()).thenReturn(true);
+
+        executor.refresh(ctx);
+
+        assertEquals(List.of("ok"), service.seen);
+        verify(cache).put("ok", "value");
+    }
+
+    @Test
     public void forceContext_runAndCallHelpers() {
         AtomicBoolean inside = new AtomicBoolean(false);
         FluxForceRefreshContext.runWithForce(() -> inside.set(FluxForceRefreshContext.isForceRefresh()));
@@ -186,6 +205,14 @@ public class FluxCacheRefreshExecutorTest {
         public String noArg() {
             noArgCalls++;
             return "noarg";
+        }
+
+        public String fail(String key) {
+            if ("boom".equals(key)) {
+                throw new IllegalStateException("loader boom");
+            }
+            seen.add(key);
+            return "value";
         }
     }
 }

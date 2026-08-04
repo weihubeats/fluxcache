@@ -217,4 +217,4 @@ java -jar fluxcache-benchmark/target/benchmarks.jar FluxCacheLatencyBenchmark -r
 
 ## 质量门禁
 
-CI（`mvn verify`）内置 JaCoCo 覆盖率检查：`fluxcache-core` 行覆盖率 ≥ 80%、分支覆盖率 ≥ 80%，不达标构建失败。覆盖率报告见 `fluxcache-core/target/site/jacoco/`，并上报 Codecov。
+CI（`mvn verify`）内置 JaCoCo 覆盖率检查：`fluxcache-core` 行覆盖率 ≥ 85%、分支覆盖率 ≥ 85%，不达标构建失败。覆盖率报告见 `fluxcache-core/target/site/jacoco/`，并上报 Codecov。

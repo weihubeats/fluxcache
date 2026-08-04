@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import java.lang.reflect.Method;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
@@ -306,9 +307,96 @@ public class FluxCacheAnnotationInterceptorBranchTest {
         assertEquals(1, loads.get());
     }
 
+    @Test
+    public void singleFlightDisabled_directLoad() throws Throwable {
+        when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
+        properties.setSingleFlightEnable(false);
+        AtomicInteger loads = new AtomicInteger();
+
+        Object result = interceptor.invoke(invocation(() -> {
+            loads.incrementAndGet();
+            return "direct";
+        }, "k1"));
+
+        assertEquals("direct", result);
+        assertEquals(1, loads.get());
+        verify(cache).put("k1", "direct");
+    }
+
+    @Test
+    public void singleFlight_waiterReusesLeaderResult() throws Throwable {
+        when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
+        CompletableFuture<Object> leader = new CompletableFuture<>();
+        leader.complete("leader-value");
+        seedSingleFlight("branch-cache::k1", leader);
+        AtomicInteger loads = new AtomicInteger();
+
+        Object result = interceptor.invoke(invocation(() -> {
+            loads.incrementAndGet();
+            return "own-value";
+        }, "k1"));
+
+        assertEquals("leader-value", result);
+        assertEquals(0, loads.get());
+    }
+
+    @Test
+    public void singleFlight_waiterFailure_fallsBackToOwnLoad() throws Throwable {
+        when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
+        CompletableFuture<Object> leader = new CompletableFuture<>();
+        leader.completeExceptionally(new IllegalStateException("leader-down"));
+        seedSingleFlight("branch-cache::k1", leader);
+
+        Object result = interceptor.invoke(invocation(() -> "own-value", "k1"));
+
+        assertEquals("own-value", result);
+        verify(cache).put("k1", "own-value");
+    }
+
+    @Test
+    public void singleFlight_timeout_fallsBackToOwnLoad() throws Throwable {
+        when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
+        CompletableFuture<Object> leader = new CompletableFuture<>();
+        seedSingleFlight("branch-cache::k1", leader);
+        properties.setSingleFlightTimeoutMillis(1);
+
+        Object result = interceptor.invoke(invocation(() -> "own-value", "k1"));
+
+        assertEquals("own-value", result);
+        verify(cache).put("k1", "own-value");
+    }
+
+    @Test
+    public void hitOptionalPresent_notEmpty_allowed() throws Throwable {
+        when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
+        doReturn((FluxCache.ValueWrapper<Object>) () -> Optional.of("inner")).when(cache).get("k1");
+
+        Object result = interceptor.invoke(invocation(() -> "loaded", "k1"));
+
+        assertEquals(Optional.of("inner"), result);
+    }
+
+    @Test
+    public void hitOptionalEmpty_allowed_returnsEmpty() throws Throwable {
+        when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
+        properties.setAllowCacheEmptyOptional(true);
+        doReturn((FluxCache.ValueWrapper<Object>) Optional::empty).when(cache).get("k1");
+
+        Object result = interceptor.invoke(invocation(() -> "loaded", "k1"));
+
+        assertEquals(Optional.empty(), result);
+        verify(monitor).publishMonitorEvent(argEvent(com.fluxcache.core.monitor.MonitorEventEnum.CACHE_HIT));
+    }
+
     private com.fluxcache.core.monitor.FluxCacheMonitorEvent argEvent(com.fluxcache.core.monitor.MonitorEventEnum type) {
         return org.mockito.ArgumentMatchers.argThat(
                 e -> e != null && e.getMonitorEventEnum() == type);
+    }
+
+    private void seedSingleFlight(String key, CompletableFuture<Object> future) throws Exception {
+        java.lang.reflect.Field f = FluxCacheAnnotationInterceptor.class.getDeclaredField("singleFlightMap");
+        f.setAccessible(true);
+        ((java.util.Map<String, CompletableFuture<Object>>) f.get(interceptor)).put(key, future);
     }
 
     public static class Target {
