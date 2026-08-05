@@ -1,0 +1,22 @@
+# FluxCache 抓取配置示例
+# 合并进你的 prometheus.yml，或作为独立配置挂载
+# 更多说明：docs/observability/prometheus-grafana.md
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/alerts.yml
+
+scrape_configs:
+  # 应用必须引入 fluxcache-metrics + actuator + micrometer-registry-prometheus
+  - job_name: fluxcache
+    metrics_path: /actuator/prometheus
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - '10.0.0.10:8091'           # 应用地址 + management.server.port（示例）
+          - '10.0.0.11:8091'           # 多实例直接加 target
+        labels:
+          app: order-service

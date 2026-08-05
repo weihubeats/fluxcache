@@ -9,10 +9,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.ObjectUtils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author : wh
@@ -48,12 +50,31 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
      */
     private final ConcurrentMap<String, FluxCacheStatics> cacheStaticsMap = new ConcurrentHashMap<>(32);
 
+    /**
+     * 指标监听器（次级扩展点，如 Micrometer 指标导出），可为空
+     */
+    private final List<FluxCacheMetricsListener> fluxCacheMetricsListeners = new CopyOnWriteArrayList<>();
+
+    /**
+     * 注册指标监听器（由外部可观测性模块注入）
+     */
+    public void addFluxCacheMetricsListener(FluxCacheMetricsListener listener) {
+        if (Objects.nonNull(listener)) {
+            fluxCacheMetricsListeners.add(listener);
+        }
+    }
+
     @Override
     public void createCacheStaticsMap(ConcurrentMap<String, FluxCacheOperation> data) {
         if (ObjectUtils.isEmpty(data)) {
             return;
         }
-        data.forEach((cacheName, op) -> cacheStaticsMap.computeIfAbsent(cacheName, k -> new FluxCacheStatics()));
+        data.forEach((cacheName, op) -> {
+            FluxCacheStatics previous = cacheStaticsMap.putIfAbsent(cacheName, new FluxCacheStatics());
+            if (previous == null) {
+                notifyCacheRegistered(cacheName);
+            }
+        });
     }
 
     @Override
@@ -74,7 +95,10 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
             return;
         }
 
-        Runnable task = () -> applier.accept(statics, event.getCount(), event.getLoadTime());
+        Runnable task = () -> {
+            applier.accept(statics, event.getCount(), event.getLoadTime());
+            fluxCacheMetricsListeners.forEach(listener -> listener.onMonitorEvent(event));
+        };
 
         if (cacheProperties.isAsyncMonitorEnable()) {
             cacheThreadPoolExecutor.execute(task);
@@ -86,8 +110,17 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
 
     @Override
     public void createNewCacheStatics(String cacheName) {
-        cacheStaticsMap.putIfAbsent(cacheName, new FluxCacheStatics());
+        FluxCacheStatics previous = cacheStaticsMap.putIfAbsent(cacheName, new FluxCacheStatics());
+        if (previous == null) {
+            notifyCacheRegistered(cacheName);
+        }
+    }
 
+    private void notifyCacheRegistered(String cacheName) {
+        if (Objects.isNull(cacheName)) {
+            return;
+        }
+        fluxCacheMetricsListeners.forEach(listener -> listener.onCacheRegistered(cacheName));
     }
 }
 

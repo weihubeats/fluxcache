@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/weihubeats/fluxcache/actions/workflows/ci.yml/badge.svg)](https://github.com/weihubeats/fluxcache/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/weihubeats/fluxcache/branch/main/graph/badge.svg)](https://codecov.io/gh/weihubeats/fluxcache)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.weihubeats/fluxcache-all-spring-boot-starter)](https://central.sonatype.com/artifact/io.github.weihubeats/fluxcache-all-spring-boot-starter)
+[![License](https://img.shields.io/github/license/weihubeats/fluxcache)](LICENSE)
 
 多级缓存框架 (multilevel cache framework)
 
@@ -18,6 +20,29 @@ A lightweight multilevel cache framework for Spring Boot applications. Supports 
 - Dashboard 缓存命中率等监控统计
 - 纯注解使用
 - **多 Redis 客户端**：默认 Spring Data Redis；Redisson 可选独立模块（含 `REDIS_MAP` / RMapCache）
+- **Micrometer 指标导出**（可选模块）：`flux_cache_hit_total` / `flux_cache_miss_total` / `flux_cache_load_time` 等，对接 Prometheus + Grafana
+
+## 性能压测（Benchmark）
+
+JMH 基准（`fluxcache-benchmark`，M2 Max / JDK21 / JMH 1.37），对比 FluxCache vs 纯 Redis vs Spring Cache + Caffeine vs JetCache：
+
+```mermaid
+xychart-beta
+    title "读延迟对比（µs/op，对数刻度）"
+    x-axis ["FluxCache L1(注解)", "FluxCache L1(直调)", "Spring Cache+Caffeine", "JetCache", "纯Redis", "FluxCache L2"]
+    y-axis "µs/op" 0 --> 2600
+    bar [0.385, 0.038, 0.019, 0.170, 2475.245, 2585.417]
+```
+
+| 指标 | 结果 |
+| --- | --- |
+| L1 命中延迟（完整注解链路） | `0.385 µs`，相对纯 Redis（2.475 ms）快 **~6,400x** |
+| 90% L1 / 10% L2 混合读吞吐 | `31,494 ops/s`，纯 Redis 全远程仅 `2,808 ops/s`，高 **11.2x** |
+| 并发击穿（16 线程同一冷 key） | 单飞开启吞吐 `9,180 ops/s` vs 关闭 `1,609 ops/s`，高 **5.7x** |
+| 击穿 → DB 调用 | 单飞开启 `0.042 次/op` vs 关闭 `1.43 次/op`，减少约 **34x** |
+| 框架成本（L2 命中相对纯 Redis） | 仅 **+4.4%** |
+
+> 方法：纯 Redis 基线以 2 ms 固定延迟模拟同城/局域网 RTT（结果随真实 RTT 线性变化）；FluxCache 一律走完整注解链路（SpEL + 拦截器 + 单飞 + 监控 + 多级缓存），即生产真实路径。完整报告见 [BENCHMARK-REPORT.md](docs/benchmark/BENCHMARK-REPORT.md)。
 
 ## 页面
 
@@ -192,11 +217,70 @@ public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
 
 引入 starter（含 admin）后访问管理端能力；前端见 `fluxcache-dashboard`
 
-## 基准测试（Benchmark）
+## 可观测性（Micrometer / Prometheus / Grafana）
 
-`fluxcache-benchmark` 基于 JMH，对比 FluxCache 与 Spring Caffeine Cache 的吞吐/延迟，及单飞（single-flight）防击穿效果。默认不参与构建，需激活 profile：
+企业级监控不依赖内置 Dashboard，支持通过 Micrometer 将缓存指标导出到 Prometheus + Grafana，与业务指标统一治理。
 
-运行：
+### 1. 引入依赖
+
+`fluxcache-metrics` 已传递依赖 actuator 与 Prometheus registry，**只需 2 个依赖**：
+
+```xml
+<dependency>
+    <groupId>io.github.weihubeats</groupId>
+    <artifactId>fluxcache-all-spring-boot-starter</artifactId>
+    <version>0.0.4</version>
+</dependency>
+<dependency>
+    <groupId>io.github.weihubeats</groupId>
+    <artifactId>fluxcache-metrics</artifactId>
+    <version>0.0.4</version>
+</dependency>
+```
+
+应用装配 `MeterRegistry` 后自动生效（`@ConditionalOnBean`），无需额外配置；未装配指标体系时对缓存链路零影响。
+
+### 2. 指标清单
+
+| 指标（Prometheus 名） | 类型 | 说明 | 标签 |
+| --- | --- | --- | --- |
+| `flux_cache_hit_total` | Counter | 命中累计 | `cache` |
+| `flux_cache_miss_total` | Counter | 未命中累计 | `cache` |
+| `flux_cache_eviction_total` | Counter | 驱逐累计 | `cache` |
+| `flux_cache_load_time_seconds` | Summary/Histogram | L2/DB 加载耗时，含 p50/p95/p99 | `cache` |
+| `flux_cache_hit_rate` | Gauge | 命中率 = hit/(hit+miss) | `cache` |
+| `flux_cache_miss_rate` | Gauge | 未命中率 = miss/(hit+miss) | `cache` |
+
+> 完整对接指南（Prometheus 抓取配置、Grafana 数据源/面板导入、告警规则）见 **[docs/observability/prometheus-grafana.md](docs/observability/prometheus-grafana.md)**，含可直接导入的 [fluxcache-dashboard.json](docs/observability/grafana/fluxcache-dashboard.json) 与告警规则 [alerts.yml](docs/observability/prometheus/alerts.yml)。
+
+### 3. Prometheus 抓取
+
+`/actuator/prometheus` 端点直接暴露：
+
+```text
+# TYPE flux_cache_hit_total counter
+flux_cache_hit_total{cache="studentLocalRedis"} 12345
+# TYPE flux_cache_load_time_seconds summary
+flux_cache_load_time_seconds{quantile="0.95",cache="studentLocalRedis"} 0.00042
+```
+
+### 4. Grafana 面板 PromQL
+
+```promql
+# 命中率（各缓存）
+sum(rate(flux_cache_hit_total[5m])) by (cache)
+  / (sum(rate(flux_cache_hit_total[5m])) by (cache) + sum(rate(flux_cache_miss_total[5m])) by (cache))
+
+# P99 加载耗时
+histogram_quantile(0.99, sum(rate(flux_cache_load_time_seconds_bucket[5m])) by (le))
+
+# 缓存读取 QPS
+sum(rate(flux_cache_hit_total[5m]) + rate(flux_cache_miss_total[5m])) by (cache)
+```
+
+## 基准测试（Benchmark）复现
+
+数据与图表见上文「[性能压测](#性能压测benchmark)」，本节为复现方法。`fluxcache-benchmark` 基于 JMH，默认不参与构建，需激活 profile：
 
 ```bash
 # 方式一：直接运行脚本（编译 + 生成 JSON 结果到 docs/benchmark/）
@@ -210,22 +294,10 @@ java -jar fluxcache-benchmark/target/benchmarks.jar FluxCacheLatencyBenchmark -r
 主要场景：
 
 - `FluxCacheThroughputBenchmark`：FluxCache vs Spring Caffeine 本地缓存吞吐
-- `FluxCacheLatencyBenchmark`：FluxCache（含 L1/L2）vs 纯 Redis vs Spring Caffeine 延迟对比
+- `FluxCacheLatencyBenchmark`：FluxCache（含 L1/L2）vs 纯 Redis vs Spring Caffeine vs JetCache 延迟对比
 - `SingleFlightPenetrationBenchmark`：并发缓存穿透时开启/关闭单飞的命中与耗时对比
 
-结果写入 `docs/benchmark/results.json`（JMH JSON 汇总），完整报告见 [docs/benchmark/BENCHMARK-REPORT.md](docs/benchmark/BENCHMARK-REPORT.md)。
-
-### 最新结果（2026-08-04，Apple M2 Max / JDK21 / JMH 1.37）
-
-| 指标 | 结果 |
-| --- | --- |
-| L1 命中延迟（完整注解链路 / 直接 API） | `0.385 µs` / `0.038 µs`，相对纯 Redis（2.475 ms）快 **6,400x / 65,000x** |
-| 90% L1 / 10% L2 混合读吞吐 | `31,494 ops/s`，纯 Redis 全远程仅 `2,808 ops/s`，高 **11.2x** |
-| 并发击穿（16 线程同一冷 key） | 单飞开启吞吐 `9,180 ops/s` vs 关闭 `1,609 ops/s`，高 **5.7x** |
-| 击穿 → DB 调用 | 单飞开启 `0.042 次/op` vs 关闭 `1.43 次/op`，减少约 **34x** |
-| 框架成本（L2 命中相对纯 Redis） | 仅 **+4.4%** |
-
-> 环境与方法说明：纯 Redis 基线以 2 ms 固定延迟模拟同城/局域网 RTT（结果随真实 RTT 线性变化）；FluxCache 一律走完整注解链路（SpEL + 拦截器 + 单飞 + 监控 + 多级缓存），即生产真实路径。单飞机制将击穿时的 N 次 DB 调用收敛为 1 次 + 结果共享。
+产物：`docs/benchmark/results.json`（JMH 原始结构化数据）、`docs/benchmark/run.log`（完整日志）。完整报告见 [docs/benchmark/BENCHMARK-REPORT.md](docs/benchmark/BENCHMARK-REPORT.md)。
 
 ## 质量门禁
 

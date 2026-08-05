@@ -9,6 +9,7 @@ ignore:
   - "fluxcache-core/src/main/java/com/fluxcache/core/spi/FluxCacheCreator.java"
   - "fluxcache-core/src/main/java/com/fluxcache/core/spi/FluxCacheCreateContext.java"
   - "fluxcache-core/src/main/java/com/fluxcache/core/monitor/FluxCacheMonitor.java"
+  - "fluxcache-core/src/main/java/com/fluxcache/core/monitor/FluxCacheMetricsListener.java"
   - "fluxcache-core/src/main/java/com/fluxcache/core/caffeine/sync/CacheSyncStrategy.java"
   - "fluxcache-core/src/main/java/com/fluxcache/core/caffeine/sync/CacheSyncPostProcessor.java"
   - "fluxcache-core/src/main/java/com/fluxcache/core/lock/FluxDistributedLock.java"

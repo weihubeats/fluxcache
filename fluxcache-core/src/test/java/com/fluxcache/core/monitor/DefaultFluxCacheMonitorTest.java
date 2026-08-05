@@ -6,7 +6,9 @@ import com.fluxcache.core.properties.FluxCacheProperties;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -127,6 +129,68 @@ public class DefaultFluxCacheMonitorTest {
         data.put("c1", mockOperation("c1"));
         monitor.createCacheStaticsMap(new ConcurrentHashMap<>(data));
         assertNotNull(monitor.getCacheStatics("c1"));
+    }
+
+    @Test
+    public void metricsListener_receivesMonitorEvents() {
+        properties.setAsyncMonitorEnable(false);
+        List<FluxCacheMonitorEvent> received = new ArrayList<>();
+        monitor.addFluxCacheMetricsListener(new FluxCacheMetricsListener() {
+            @Override
+            public void onMonitorEvent(FluxCacheMonitorEvent event) {
+                received.add(event);
+            }
+        });
+
+        monitor.publishMonitorEvent(event(MonitorEventEnum.CACHE_HIT, 2, 0));
+        monitor.publishMonitorEvent(event(MonitorEventEnum.CACHE_MISSING, 1, 30));
+
+        assertEquals(2, received.size());
+        assertEquals(MonitorEventEnum.CACHE_HIT, received.get(0).getMonitorEventEnum());
+        assertEquals(2, received.get(0).getCount());
+        assertEquals(MonitorEventEnum.CACHE_MISSING, received.get(1).getMonitorEventEnum());
+        assertEquals(30, received.get(1).getLoadTime());
+    }
+
+    @Test
+    public void metricsListener_receivesCacheRegistered() {
+        List<String> registered = new ArrayList<>();
+        monitor.addFluxCacheMetricsListener(new FluxCacheMetricsListener() {
+            @Override
+            public void onCacheRegistered(String cacheName) {
+                registered.add(cacheName);
+            }
+        });
+
+        monitor.createNewCacheStatics("a");
+        monitor.createNewCacheStatics("a");
+        Map<String, FluxCacheOperation> data = new HashMap<>();
+        data.put("b", mockOperation("b"));
+        monitor.createCacheStaticsMap(new ConcurrentHashMap<>(data));
+        // 已存在的缓存再次初始化不应重复通知
+        monitor.createCacheStaticsMap(new ConcurrentHashMap<>(data));
+
+        assertTrue(registered.contains("a"));
+        assertTrue(registered.contains("b"));
+        // 重复注册同 key 应只通知一次
+        assertEquals(2, registered.size());
+    }
+
+    @Test
+    public void metricsListener_nullAndEdgeCases_areSafe() {
+        List<FluxCacheMonitorEvent> received = new ArrayList<>();
+        monitor.addFluxCacheMetricsListener(null);
+        monitor.addFluxCacheMetricsListener(new FluxCacheMetricsListener() {
+            @Override
+            public void onMonitorEvent(FluxCacheMonitorEvent event) {
+                received.add(event);
+            }
+        });
+
+        properties.setAsyncMonitorEnable(false);
+        monitor.publishMonitorEvent(event(MonitorEventEnum.CACHE_HIT, 1, 0));
+
+        assertEquals(1, received.size());
     }
 
     private FluxCacheOperation mockOperation(String cacheName) {

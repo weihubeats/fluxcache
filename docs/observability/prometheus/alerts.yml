@@ -1,0 +1,41 @@
+# FluxCache 告警规则示例（Prometheus）
+# 挂载方式：将本文件放入 rule_files 指定路径（见 prometheus.yml）
+# 阈值按业务可调：命中率、P99 加载耗时、驱逐速率
+
+groups:
+  - name: fluxcache.alerts
+    rules:
+      # 命中率跌破阈值：缓存可能失效/被清空/穿透
+      - alert: FluxCacheHitRateLow
+        expr: |
+          sum(rate(flux_cache_hit_total[10m])) by (cache)
+            / (sum(rate(flux_cache_hit_total[10m])) by (cache)
+               + sum(rate(flux_cache_miss_total[10m])) by (cache)) < 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '缓存 {{ $labels.cache }} 命中率 < 80%'
+          description: '命中率降至 {{ humanize $value }}，可能出现缓存穿透或失效风暴'
+
+      # P99 加载耗时升高：后端（Redis/DB）变慢或连接打满
+      - alert: FluxCacheLoadTimeP99High
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(flux_cache_load_time_seconds_bucket[5m])) by (le, cache)) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '缓存 {{ $labels.cache }} P99 加载耗时 > 50ms'
+          description: 'P99 加载耗时 {{ $value }}s，检查 Redis/DB 负载'
+
+      # 驱逐速率异常：可能是容量不足导致本地缓存抖动
+      - alert: FluxCacheEvictionSpike
+        expr: rate(flux_cache_eviction_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: '缓存 {{ $labels.cache }} 驱逐速率异常'
+          description: '驱逐速率 {{ $value }} events/s，检查缓存容量/过期配置'

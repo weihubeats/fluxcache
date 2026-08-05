@@ -1,0 +1,188 @@
+{
+  "id": null,
+  "uid": "fluxcache-overview",
+  "title": "FluxCache Overview",
+  "tags": ["fluxcache", "cache", "micrometer"],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 39,
+  "version": 1,
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "cache",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "Prometheus" },
+        "query": "label_values(flux_cache_hit_total, cache)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "缓存命中率趋势 (5m rate)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.8 },
+              { "color": "green", "value": 0.9 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "expr": "sum(rate(flux_cache_hit_total{cache=~\"$cache\"}[5m])) by (cache) / (sum(rate(flux_cache_hit_total{cache=~\"$cache\"}[5m])) by (cache) + sum(rate(flux_cache_miss_total{cache=~\"$cache\"}[5m])) by (cache))",
+          "legendFormat": "{{cache}}",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "读取 QPS (按缓存)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "drawStyle": "bars", "fillOpacity": 30 } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "expr": "sum(rate(flux_cache_hit_total{cache=~\"$cache\"}[5m]) + rate(flux_cache_miss_total{cache=~\"$cache\"}[5m])) by (cache)",
+          "legendFormat": "{{cache}}",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "P99 加载耗时 (L2/DB)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "min": 0, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.05 }, { "color": "red", "value": 0.1 } ] } },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(flux_cache_load_time_seconds_bucket{cache=~\"$cache\"}[5m])) by (le, cache))",
+          "legendFormat": "p99 {{cache}}",
+          "intervalFactor": 1,
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(flux_cache_load_time_seconds_bucket{cache=~\"$cache\"}[5m])) by (le, cache))",
+          "legendFormat": "p50 {{cache}}",
+          "intervalFactor": 1,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "驱逐速率",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": { "unit": "eps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "expr": "rate(flux_cache_eviction_total{cache=~\"$cache\"}[5m])",
+          "legendFormat": "{{cache}}",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "命中 / 未命中累计 (全部缓存)",
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "none", "color": { "mode": "palette-classic" } },
+        "overrides": []
+      },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" } },
+      "targets": [
+        {
+          "expr": "sum(rate(flux_cache_hit_total[5m])) * 60 * 5",
+          "legendFormat": "hits(last 5m)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(flux_cache_miss_total[5m])) * 60 * 5",
+          "legendFormat": "misses(last 5m)",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "各缓存累计命中率 (Gauge)",
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "max": 1, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 0.8 }, { "color": "green", "value": 0.9 } ] } },
+        "overrides": []
+      },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "flux_cache_hit_rate{cache=~\"$cache\"}",
+          "legendFormat": "{{cache}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "未命中率 (Gauge)",
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "max": 1, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.2 }, { "color": "red", "value": 0.5 } ] } },
+        "overrides": []
+      },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "flux_cache_miss_rate{cache=~\"$cache\"}",
+          "legendFormat": "{{cache}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "revision": 1
+}
