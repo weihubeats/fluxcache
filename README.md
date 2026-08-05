@@ -213,7 +213,19 @@ java -jar fluxcache-benchmark/target/benchmarks.jar FluxCacheLatencyBenchmark -r
 - `FluxCacheLatencyBenchmark`：FluxCache（含 L1/L2）vs 纯 Redis vs Spring Caffeine 延迟对比
 - `SingleFlightPenetrationBenchmark`：并发缓存穿透时开启/关闭单飞的命中与耗时对比
 
-结果写入 `docs/benchmark/results.json`（JMH JSON 汇总）。
+结果写入 `docs/benchmark/results.json`（JMH JSON 汇总），完整报告见 [docs/benchmark/BENCHMARK-REPORT.md](docs/benchmark/BENCHMARK-REPORT.md)。
+
+### 最新结果（2026-08-04，Apple M2 Max / JDK21 / JMH 1.37）
+
+| 指标 | 结果 |
+| --- | --- |
+| L1 命中延迟（完整注解链路 / 直接 API） | `0.385 µs` / `0.038 µs`，相对纯 Redis（2.475 ms）快 **6,400x / 65,000x** |
+| 90% L1 / 10% L2 混合读吞吐 | `31,494 ops/s`，纯 Redis 全远程仅 `2,808 ops/s`，高 **11.2x** |
+| 并发击穿（16 线程同一冷 key） | 单飞开启吞吐 `9,180 ops/s` vs 关闭 `1,609 ops/s`，高 **5.7x** |
+| 击穿 → DB 调用 | 单飞开启 `0.042 次/op` vs 关闭 `1.43 次/op`，减少约 **34x** |
+| 框架成本（L2 命中相对纯 Redis） | 仅 **+4.4%** |
+
+> 环境与方法说明：纯 Redis 基线以 2 ms 固定延迟模拟同城/局域网 RTT（结果随真实 RTT 线性变化）；FluxCache 一律走完整注解链路（SpEL + 拦截器 + 单飞 + 监控 + 多级缓存），即生产真实路径。单飞机制将击穿时的 N 次 DB 调用收敛为 1 次 + 结果共享。
 
 ## 质量门禁
 
