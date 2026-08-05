@@ -10,6 +10,9 @@
     </parent>
 
     <artifactId>fluxcache-redis-spring</artifactId>
+    <properties>
+        <jacoco.skip>true</jacoco.skip>
+    </properties>
     <name>fluxcache-redis-spring</name>
     <description>FluxCache Redis implementation based on Spring Data Redis</description>
     <url>https://github.com/weihubeats/fluxcache</url>

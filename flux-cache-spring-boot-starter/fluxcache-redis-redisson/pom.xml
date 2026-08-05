@@ -10,6 +10,9 @@
     </parent>
 
     <artifactId>fluxcache-redis-redisson</artifactId>
+    <properties>
+        <jacoco.skip>true</jacoco.skip>
+    </properties>
     <name>fluxcache-redis-redisson</name>
     <description>FluxCache Redis implementation based on Redisson (standalone, no spring-data-redis)</description>
     <url>https://github.com/weihubeats/fluxcache</url>

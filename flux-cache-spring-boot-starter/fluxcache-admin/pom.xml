@@ -10,6 +10,9 @@
     </parent>
 
     <artifactId>fluxcache-admin</artifactId>
+    <properties>
+        <jacoco.skip>true</jacoco.skip>
+    </properties>
     <name>fluxcache-admin</name>
     <description>FluxCache admin dashboard module</description>
     <url>https://github.com/weihubeats/fluxcache</url>

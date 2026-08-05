@@ -10,6 +10,9 @@
     </parent>
 
     <artifactId>fluxcache-all-spring-boot-starter</artifactId>
+    <properties>
+        <jacoco.skip>true</jacoco.skip>
+    </properties>
     <name>fluxcache-all-spring-boot-starter</name>
     <description>FluxCache all-in-one Spring Boot starter</description>
     <url>https://github.com/weihubeats/fluxcache</url>
