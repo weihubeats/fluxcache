@@ -86,3 +86,8 @@ atlassian-ide-plugin.xml
 .flattened-pom.xml
 # Maven target (any depth)
 **/target/
+
+# Website (VitePress)
+website/node_modules/
+website/.vitepress/cache/
+website/.vitepress/dist/

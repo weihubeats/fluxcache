@@ -52,3 +52,25 @@ jobs:
           files: fluxcache-core/target/site/jacoco/jacoco.xml
           fail_ci_if_error: true
           verbose: true
+
+  website:
+    name: Build Website
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        working-directory: website
+        run: npm ci
+
+      - name: Build website
+        working-directory: website
+        run: npm run build

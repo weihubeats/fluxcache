@@ -1,0 +1,19 @@
+{
+  "name": "fluxcache-website",
+  "version": "0.0.1",
+  "private": true,
+  "description": "FluxCache official website",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "start": "npm run build && npm run preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.5.0"
+  },
+  "dependencies": {
+    "mermaid": "^11.16.1"
+  }
+}
