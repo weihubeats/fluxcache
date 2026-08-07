@@ -85,6 +85,21 @@ class FluxCacheBehaviorTest {
         });
     }
 
+    private int readFirstCacheByCaffeine(String key) {
+        return firstAmount(testOrderController.firstCacheByCaffeine(key));
+    }
+
+    /**
+     * evict 通过 redis pub/sub 异步传播，当前节点也会消费自己的事件，
+     * 直接读后断言可能与旧缓存值竞态（详见 awaitCacheSyncSettled 注释）。
+     * 轮询直至每次都拿到不等于 staleAge 的新值，避免固定延时后立即断言。
+     */
+    private void awaitReloadedAmount(Function<String, Integer> loader, String key, int staleAmount) {
+        await().atMost(5, TimeUnit.SECONDS)
+                .pollDelay(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> assertThat(loader.apply(key)).isNotEqualTo(staleAmount));
+    }
+
     @Nested
     @DisplayName("Caffeine 一级缓存")
     class CaffeineFirstLevel {
@@ -133,13 +148,13 @@ class FluxCacheBehaviorTest {
             assertThat(testOrderController.firstCacheByCaffeineAndOptional(key)).isEqualTo(first);
 
             testOrderController.clearFirstCacheByCaffeineAndOptional(key);
-            awaitCacheSyncSettled();
-
-            Optional<List<OrderVO>> reloaded = testOrderController.firstCacheByCaffeineAndOptional(key);
-            assertThat(reloaded).isPresent();
-            assertThat(firstAmount(reloaded.get())).isNotEqualTo(firstAmount(first.orElseThrow()));
-            assertThat(firstAmount(testOrderController.firstCacheByCaffeineAndOptional(key).orElseThrow()))
-                    .isEqualTo(firstAmount(reloaded.get()));
+            await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+                Optional<List<OrderVO>> reloaded = testOrderController.firstCacheByCaffeineAndOptional(key);
+                assertThat(reloaded).isPresent();
+                assertThat(firstAmount(reloaded.get())).isNotEqualTo(firstAmount(first.orElseThrow()));
+                assertThat(firstAmount(testOrderController.firstCacheByCaffeineAndOptional(key).orElseThrow()))
+                        .isEqualTo(firstAmount(reloaded.get()));
+            });
         }
 
         @Test
@@ -152,12 +167,11 @@ class FluxCacheBehaviorTest {
             int ageB = firstAmount(testOrderController.firstCacheByCaffeine(keyB));
 
             testOrderController.clearFirstCacheByCaffeineByKey(keyA);
-            awaitCacheSyncSettled();
 
-            int reloadedA = firstAmount(testOrderController.firstCacheByCaffeine(keyA));
-            assertThat(reloadedA).isNotEqualTo(ageA);
+            awaitReloadedAmount(FluxCacheBehaviorTest.this::readFirstCacheByCaffeine, keyA, ageA);
+            int reloadedA = readFirstCacheByCaffeine(keyA);
             awaitCachedAmount("orderCacheByCaffeine", keyA, reloadedA);
-            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyB))).isEqualTo(ageB);
+            assertThat(readFirstCacheByCaffeine(keyB)).isEqualTo(ageB);
         }
 
         @Test
@@ -169,10 +183,9 @@ class FluxCacheBehaviorTest {
             int ageB = firstAmount(testOrderController.firstCacheByCaffeine(keyB));
 
             testOrderController.clearFirstCacheByCaffeineByName("orderCacheByCaffeine");
-            awaitCacheSyncSettled();
 
-            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyA))).isNotEqualTo(ageA);
-            assertThat(firstAmount(testOrderController.firstCacheByCaffeine(keyB))).isNotEqualTo(ageB);
+            awaitReloadedAmount(FluxCacheBehaviorTest.this::readFirstCacheByCaffeine, keyA, ageA);
+            awaitReloadedAmount(FluxCacheBehaviorTest.this::readFirstCacheByCaffeine, keyB, ageB);
             awaitCacheSyncSettled();
         }
 
@@ -233,7 +246,9 @@ class FluxCacheBehaviorTest {
             assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(key))).isEqualTo(age);
 
             testOrderController.deleteFirstCacheByRedisBucket(key);
-            assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(key))).isNotEqualTo(age);
+            await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
+                    assertThat(testOrderController.firstCacheByRedisBucket(key).get(0).getOrderAmount())
+                            .isNotEqualTo(age));
         }
 
         @Test
@@ -245,7 +260,8 @@ class FluxCacheBehaviorTest {
 
             int putAge = firstAmount(testOrderController.putFirstCacheByRedisBucket(key));
             assertThat(putAge).isNotEqualTo(age);
-            assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(key))).isEqualTo(putAge);
+            await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
+                    assertThat(firstAmount(testOrderController.firstCacheByRedisBucket(key))).isEqualTo(putAge));
         }
 
         @Test
@@ -257,7 +273,8 @@ class FluxCacheBehaviorTest {
 
             int putAge = firstAmount(testOrderController.redisCachePut(key));
             assertThat(putAge).isNotEqualTo(age);
-            assertThat(firstAmount(testOrderController.firstCacheByRedis(key))).isEqualTo(putAge);
+            await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
+                    assertThat(firstAmount(testOrderController.firstCacheByRedis(key))).isEqualTo(putAge));
         }
     }
 
