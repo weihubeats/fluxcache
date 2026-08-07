@@ -36,5 +36,5 @@ cd website && npm run start
 
 ## 发布
 
-- CI（`.github/workflows/ci.yml` 的 `website` job）会在每次 push 时自动执行 `npm ci && npm run build`，保证文档可构建。
-- 站点 base 路径为 `/fluxcache/`，发布到 GitHub Pages 需部署为 `https://<user>.github.io/fluxcache/`。
+- CI（`.github/workflows/ci.yml` 的 `website` job）会在每次 push/PR 时自动执行 `npm ci && npm run build`，保证文档可构建。
+- 推送 main 分支后，`deploy-pages.yml` 会自动构建并发布到 GitHub Pages：`https://weihubeats.github.io/fluxcache/`（base 路径 `/fluxcache/`）。
