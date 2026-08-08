@@ -1,6 +1,8 @@
 package com.fluxcache.metrics.config;
 
 import com.fluxcache.core.monitor.FluxCacheMetricsListener;
+import com.fluxcache.core.monitor.FluxHotKeyListener;
+import com.fluxcache.metrics.FluxCacheHotKeyMicrometerListener;
 import com.fluxcache.metrics.FluxCacheMicrometerListener;
 import com.fluxcache.metrics.FluxCacheMonitorMetricsBinder;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -32,6 +34,12 @@ public class FluxCacheMetricsAutoConfiguration {
     @ConditionalOnMissingBean(FluxCacheMetricsListener.class)
     public FluxCacheMetricsListener fluxCacheMetricsListener(ObjectProvider<MeterRegistry> meterRegistry) {
         return new FluxCacheMicrometerListener(meterRegistry.getIfAvailable());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(FluxHotKeyListener.class)
+    public FluxHotKeyListener fluxCacheHotKeyMetricsListener(ObjectProvider<MeterRegistry> meterRegistry) {
+        return new FluxCacheHotKeyMicrometerListener(meterRegistry.getIfAvailable());
     }
 
     @Bean

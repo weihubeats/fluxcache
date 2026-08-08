@@ -8,12 +8,16 @@ import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;
 import com.fluxcache.core.model.FluxCacheOperation;
 import com.fluxcache.core.monitor.FluxCacheStatics;
+import com.fluxcache.core.monitor.FluxHotKeyDetector;
+import com.fluxcache.core.monitor.FluxHotKeySnapshot;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -24,12 +28,17 @@ public class FluxCacheControllerTest {
     private FluxCacheController controller;
     private FluxCacheManager cacheManager;
     private FluxCacheProperties cacheProperties;
+    private ObjectProvider<FluxHotKeyDetector> hotKeyProvider;
+    private FluxHotKeyDetector hotKeyDetector;
 
+    @SuppressWarnings("unchecked")
     @Before
     public void setUp() {
         cacheManager = mock(FluxCacheManager.class);
         cacheProperties = mock(FluxCacheProperties.class);
-        controller = new FluxCacheController(cacheManager, cacheProperties);
+        hotKeyProvider = mock(ObjectProvider.class);
+        hotKeyDetector = mock(FluxHotKeyDetector.class);
+        controller = new FluxCacheController(cacheManager, cacheProperties, hotKeyProvider);
     }
 
     @Test
@@ -118,5 +127,29 @@ public class FluxCacheControllerTest {
 
         boolean result = controller.clearCache("testCache");
         assertTrue(result);
+    }
+
+    @Test
+    public void hotKeys_disabled_returnsEmpty() {
+        when(hotKeyProvider.getIfAvailable()).thenReturn(null);
+
+        List<com.fluxcache.admin.vo.FluxHotKeyVO> result = controller.hotKeys();
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void hotKeys_enabled_returnsSnapshots() {
+        when(hotKeyProvider.getIfAvailable()).thenReturn(hotKeyDetector);
+        FluxHotKeySnapshot snapshot = FluxHotKeySnapshot.builder()
+                .cacheName("c1").key("k1").qps(12.0).hitRate(0.99)
+                .hot(true).hotSince(1L).lastActiveTime(2L).build();
+        when(hotKeyDetector.getHotKeysSnapshot()).thenReturn(Collections.singletonList(snapshot));
+
+        List<com.fluxcache.admin.vo.FluxHotKeyVO> result = controller.hotKeys();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("k1", result.get(0).getKey());
+        assertEquals(12.0, result.get(0).getQps(), 0.0001);
     }
 }

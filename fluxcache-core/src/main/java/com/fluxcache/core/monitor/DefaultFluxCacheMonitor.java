@@ -56,6 +56,18 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
     private final List<FluxCacheMetricsListener> fluxCacheMetricsListeners = new CopyOnWriteArrayList<>();
 
     /**
+     * 热 Key 探测器，可为空（未开启时不占用读路径）
+     */
+    private volatile FluxHotKeyDetector hotKeyDetector;
+
+    /**
+     * 注入热 Key 探测器（由自动装配按配置装配）
+     */
+    public void setHotKeyDetector(FluxHotKeyDetector detector) {
+        this.hotKeyDetector = detector;
+    }
+
+    /**
      * 注册指标监听器（由外部可观测性模块注入）
      */
     public void addFluxCacheMetricsListener(FluxCacheMetricsListener listener) {
@@ -93,6 +105,19 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
         if (Objects.isNull(applier)) {
             log.warn("未注册的监控事件类型: cache={}, type={}", event.getCacheName(), event.getMonitorEventEnum());
             return;
+        }
+
+        // 热 Key 探测：同步、O(1)，只在开启时执行
+        FluxHotKeyDetector detector = this.hotKeyDetector;
+        MonitorEventEnum type = event.getMonitorEventEnum();
+        if (detector != null && (type == MonitorEventEnum.CACHE_HIT || type == MonitorEventEnum.CACHE_MISSING)
+                && !ObjectUtils.isEmpty(event.getKey())) {
+            try {
+                detector.record(event.getCacheName(), event.getKey(), type == MonitorEventEnum.CACHE_MISSING,
+                        event.getCount());
+            } catch (Exception e) {
+                log.warn("hot key record error cache={} key={}", event.getCacheName(), event.getKey(), e);
+            }
         }
 
         Runnable task = () -> {

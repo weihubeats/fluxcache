@@ -16,6 +16,8 @@ import com.fluxcache.core.manual.FluxCacheCreatePostProcess;
 import com.fluxcache.core.manual.FluxCacheDataRegistered;
 import com.fluxcache.core.monitor.DefaultFluxCacheMonitor;
 import com.fluxcache.core.monitor.FluxCacheMonitor;
+import com.fluxcache.core.monitor.FluxHotKeyDetector;
+import com.fluxcache.core.monitor.FluxHotKeyListener;
 import com.fluxcache.core.preheat.FluxCacheRefreshExecutor;
 import com.fluxcache.core.preheat.FluxRefreshTaskRegistrar;
 import com.fluxcache.core.properties.FluxCacheProperties;
@@ -24,6 +26,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +36,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
+import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy;
 import java.util.Map;
 
@@ -85,8 +89,25 @@ public class FluxProxyCacheAutoConfiguration {
 
     @Bean
     public FluxCacheMonitor cacheMonitor(CacheThreadPoolExecutor threadPoolManager,
-        FluxCacheProperties cacheProperties) {
-        return new DefaultFluxCacheMonitor(threadPoolManager, cacheProperties);
+        FluxCacheProperties cacheProperties,
+        ObjectProvider<FluxHotKeyDetector> hotKeyDetectorProvider) {
+        DefaultFluxCacheMonitor monitor = new DefaultFluxCacheMonitor(threadPoolManager, cacheProperties);
+        hotKeyDetectorProvider.ifAvailable(monitor::setHotKeyDetector);
+        return monitor;
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = FluxCacheProperties.FLUX_CACHE + ".hot-key",
+            name = "enabled", havingValue = "true")
+    @ConditionalOnMissingBean(FluxHotKeyDetector.class)
+    public FluxHotKeyDetector cacheHotKeyDetector(FluxCacheProperties cacheProperties,
+        ObjectProvider<List<FluxHotKeyListener>> hotKeyListeners) {
+        FluxHotKeyDetector detector = new FluxHotKeyDetector(cacheProperties.getHotKey());
+        List<FluxHotKeyListener> listeners = hotKeyListeners.getIfAvailable();
+        if (listeners != null && !listeners.isEmpty()) {
+            listeners.forEach(detector::addFluxHotKeyListener);
+        }
+        return detector;
     }
 
     @Bean

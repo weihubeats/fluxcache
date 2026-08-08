@@ -4,15 +4,19 @@ import com.fluxcache.admin.vo.FluxCacheAllStaticsVO;
 import com.fluxcache.admin.vo.FluxCacheOperationVO;
 import com.fluxcache.admin.vo.FluxCacheStaticsSummaryVO;
 import com.fluxcache.admin.vo.FluxCacheValueVO;
+import com.fluxcache.admin.vo.FluxHotKeyVO;
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.FluxCacheManager;
 import com.fluxcache.core.model.FluxCacheOperation;
 import com.fluxcache.core.monitor.FluxCacheStatics;
+import com.fluxcache.core.monitor.FluxHotKeyDetector;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +36,24 @@ public class FluxCacheController {
     private final FluxCacheManager cacheManager;
 
     private final FluxCacheProperties cacheProperties;
+
+    private final ObjectProvider<FluxHotKeyDetector> hotKeyDetectorProvider;
+
+    /**
+     * 当前热 Key 快照（热 Key 探测开启时返回数据，未开启返回空列表）
+     *
+     * @return 热 key 列表，按最近活跃时间倒序
+     */
+    @GetMapping("/hot-keys")
+    public List<FluxHotKeyVO> hotKeys() {
+        FluxHotKeyDetector detector = hotKeyDetectorProvider.getIfAvailable();
+        if (detector == null) {
+            return Collections.emptyList();
+        }
+        List<FluxHotKeyVO> result = new ArrayList<>();
+        detector.getHotKeysSnapshot().forEach(snapshot -> result.add(new FluxHotKeyVO(snapshot)));
+        return result;
+    }
 
     /**
      * 获取所有缓存统计

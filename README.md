@@ -21,6 +21,7 @@ A lightweight multilevel cache framework for Spring Boot applications. Supports 
 - 纯注解使用
 - **多 Redis 客户端**：默认 Spring Data Redis；Redisson 可选独立模块（含 `REDIS_MAP` / RMapCache）
 - **Micrometer 指标导出**（可选模块）：`flux_cache_hit_total` / `flux_cache_miss_total` / `flux_cache_load_time` 等，对接 Prometheus + Grafana
+- **热 Key 自动探测**：按 key 维度滑动窗口统计 QPS/未命中，双阈值 + 连续窗口确认，支持日志 / Prometheus gauge / Dashboard 查询（`/cache/manager/v1/hot-keys`）
 
 ## 性能压测（Benchmark）
 
@@ -153,6 +154,34 @@ flux:
       cache-type: REDIS
     default-cache-level: FirstCacheable
 ```
+
+#### 热 Key 自动探测（可选）
+
+默认关闭。开启后按 key 统计读 QPS 与未命中，双条件（QPS 且未命中数）连续多个分片命中才上报，并对通知做冷却节流：
+
+```yaml
+flux:
+  cache:
+    hot-key:
+      enabled: true
+      window-seconds: 60        # 判定滑动窗口长度（秒）
+      slot-seconds: 10          # 窗口分片（秒）
+      hot-qps-threshold: 10.0   # 窗口读 QPS 阈值
+      hot-miss-threshold: 5     # 窗口最小未命中次数（穿透敏感）
+      confirm-ticks: 2          # 连续多少个分片判定热才上报（消抖）
+      max-hot-key-capacity: 200000  # 统计表上限，超限按 FIFO 淘汰
+      notify-interval-ms: 30000 # 热期间重复通知冷却间隔
+```
+
+热 key 输出：INFO 日志、Prometheus gauge `flux_cache_hot_key_qps`（标签 cache/key，需引入 `fluxcache-metrics`）、Dashboard `GET /cache/manager/v1/hot-keys`。自定义监听实现 `FluxHotKeyListener` Bean 即可自动接入。
+
+**示例演示：** `fluxcache-example-starter` 内置热 key 演示（阈值已调低便于快速观测）：
+
+- `GET /hot-key/pressure?seconds=10&qps=500&name=hotKey-001`：模拟热点流量，按固定 QPS 持续打压单个 key，返回请求总数与热 key 判定结果
+- `GET /hot-keys`：查看当前热 key 快照（命中/未命中/QPS/命中率/热状态）
+- Dashboard `GET /cache/manager/v1/hot-keys`、Prometheus `flux_cache_hot_key_qps`
+
+演示缓存 `hotKeyDemoCache` 一级 TTL 1 秒强制过期，保证每个探测窗口都有未命中产生。
 
 注解上未显式设置的字段（`ttl <= 0`、`initSize/maxSize <= -1`、`fluxCacheType = NULL`）会自动回落到全局配置。
 

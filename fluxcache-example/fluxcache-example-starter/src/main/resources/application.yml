@@ -30,6 +30,17 @@ flux:
       ttl: 5
       time-unit: MINUTES
       cache-type: REDIS
+    # 热 Key 探测（示例演示用低阈值配置：1 秒窗口槽，QPS>10 且未命中>=1，连续 2 个窗口确认）
+    # 生产环境建议使用默认阈值（60s 窗口，10s 槽，QPS>=10 && miss>=5）
+    hot-key:
+      enabled: true
+      window-seconds: 10
+      slot-seconds: 1
+      hot-qps-threshold: 10.0
+      hot-miss-threshold: 1
+      confirm-ticks: 2
+      max-hot-key-capacity: 200000
+      notify-interval-ms: 30000
 
 logging:
   level:

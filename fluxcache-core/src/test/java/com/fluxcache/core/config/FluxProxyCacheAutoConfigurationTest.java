@@ -8,6 +8,8 @@ import com.fluxcache.core.manual.FluxCacheCreatePostProcess;
 import com.fluxcache.core.manual.FluxCacheDataRegistered;
 import com.fluxcache.core.monitor.DefaultFluxCacheMonitor;
 import com.fluxcache.core.monitor.FluxCacheMonitor;
+import com.fluxcache.core.monitor.FluxHotKeyDetector;
+import com.fluxcache.core.monitor.FluxHotKeyListener;
 import com.fluxcache.core.preheat.FluxRefreshTaskRegistrar;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import org.junit.Test;
@@ -17,7 +19,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -63,8 +67,21 @@ public class FluxProxyCacheAutoConfigurationTest {
     @Test
     public void cacheMonitorBean_createsDefaultMonitor() {
         CacheThreadPoolExecutor pool = config.cacheThreadPoolExecutor(properties);
-        FluxCacheMonitor monitor = config.cacheMonitor(pool, properties);
+        ObjectProvider<FluxHotKeyDetector> empty = mock(ObjectProvider.class);
+        when(empty.getIfAvailable()).thenReturn(null);
+        FluxCacheMonitor monitor = config.cacheMonitor(pool, properties, empty);
         assertTrue(monitor instanceof DefaultFluxCacheMonitor);
+    }
+
+    @Test
+    public void hotKeyDetector_wiredWhenEnabled() {
+        FluxCacheProperties.HotKeyConfig hotKey = properties.getHotKey();
+        hotKey.setEnabled(true);
+        ObjectProvider<List<FluxHotKeyListener>> listeners = mock(ObjectProvider.class);
+        when(listeners.getIfAvailable()).thenReturn(Collections.emptyList());
+        FluxHotKeyDetector detector = config.cacheHotKeyDetector(properties, listeners);
+        assertNotNull(detector);
+        assertTrue(detector.isEnabled());
     }
 
     @Test

@@ -96,6 +96,12 @@ public class FluxCacheProperties {
     private MonitoringConfig monitoring = new MonitoringConfig();
 
     /**
+     * 热 Key 自动探测配置
+     */
+    @NestedConfigurationProperty
+    private HotKeyConfig hotKey = new HotKeyConfig();
+
+    /**
      * 监控统计配置
      */
     @Data
@@ -124,6 +130,50 @@ public class FluxCacheProperties {
          * 异步监控线程池队列容量
          */
         private int monitorQueueSize = 2000;
+    }
+
+    @Data
+    public static class HotKeyConfig {
+
+        /**
+         * 是否开启热 Key 自动探测，默认关闭（零开销）
+         */
+        private boolean enabled = false;
+
+        /**
+         * 热 Key 判定滑动窗口长度（秒）
+         */
+        private int windowSeconds = 60;
+
+        /**
+         * 窗口分片长度（秒），需能被 windowSeconds 整除，取整后为分片槽数
+         */
+        private int slotSeconds = 10;
+
+        /**
+         * 判定热 Key 的窗口内读 QPS 阈值（命中+未命中）
+         */
+        private double hotQpsThreshold = 10.0;
+
+        /**
+         * 判定热 Key 的窗口内最小未命中次数（穿透敏感）
+         */
+        private long hotMissThreshold = 5;
+
+        /**
+         * 需要连续多少个分片槽判定为热，才正式对外宣布（消抖/防冷启动误报），默认 2
+         */
+        private int confirmTicks = 2;
+
+        /**
+         * 热 Key 统计表最大容量（防 key 基数爆炸，超限 LRU 淘汰）
+         */
+        private long maxHotKeyCapacity = 200_000L;
+
+        /**
+         * 热 Key 通知冷却间隔（毫秒），热期间重复上报节流
+         */
+        private long notifyIntervalMs = 30_000L;
     }
 
     @Data

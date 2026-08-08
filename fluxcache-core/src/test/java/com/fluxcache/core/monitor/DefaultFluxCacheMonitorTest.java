@@ -193,6 +193,11 @@ public class DefaultFluxCacheMonitorTest {
         assertEquals(1, received.size());
     }
 
+    @Test
+    public void createNewCacheStatics_nullName_existingStillReadable() {
+        assertNotNull(monitor.getCacheStatics("never-created"));
+    }
+
     private FluxCacheOperation mockOperation(String cacheName) {
         return new FluxCacheOperation(cacheName, com.fluxcache.core.enums.FluxCacheLevel.FirstCacheable) {
         };

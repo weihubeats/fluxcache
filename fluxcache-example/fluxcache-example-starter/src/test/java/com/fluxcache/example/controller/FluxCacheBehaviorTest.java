@@ -3,8 +3,11 @@ package com.fluxcache.example.controller;
 import com.fluxcache.core.DefaultFluxCacheManager;
 import com.fluxcache.core.FluxCache;
 import com.fluxcache.core.impl.FluxMultiLevelCache;
+import com.fluxcache.core.monitor.FluxHotKeyDetector;
+import com.fluxcache.core.monitor.FluxHotKeySnapshot;
 import com.fluxcache.example.FluxCacheApplication;
 import com.fluxcache.example.config.OrderMyFluxCacheDataRegistered;
+import com.fluxcache.example.service.HotKeyDemoService;
 import com.fluxcache.example.vo.OrderVO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -388,6 +391,33 @@ class FluxCacheBehaviorTest {
                         : cache.getAll(List.of(prefix + "1", prefix + "2"), List.class);
                 assertThat(values).hasSize(2);
             });
+        }
+    }
+
+    @Nested
+    @DisplayName("热 Key 自动探测")
+    class HotKeyDetect {
+
+        @Autowired
+        private FluxHotKeyDetector hotKeyDetector;
+
+        @Autowired
+        private HotKeyDemoService hotKeyDemoService;
+
+        @Test
+        @DisplayName("持续热点流量被判定为热 key")
+        void detectHotKeyUnderPressure() {
+            String key = uniqueKey("hot");
+            long deadline = System.currentTimeMillis() + 3000;
+            while (System.currentTimeMillis() < deadline) {
+                for (int i = 0; i < 200; i++) {
+                    hotKeyDemoService.getHotKeyData(key);
+                }
+            }
+            await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> hotKeyDetector.isHotKey(HotKeyDemoService.HOT_KEY_DEMO_CACHE, key));
+            await().atMost(5, TimeUnit.SECONDS).until(() -> hotKeyDetector.getHotKeysSnapshot().stream()
+                .anyMatch(s -> s.getKey().equals(key) && s.isHot()));
         }
     }
 }
