@@ -1,12 +1,14 @@
 package com.fluxcache.redis.spring.cache;
 
-import com.fluxcache.core.exception.FluxCacheNotSupperException;
 import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.model.FluxCacheCacheable;
+import com.fluxcache.core.utils.TtlUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomUtils;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.util.ObjectUtils;
 
@@ -82,10 +84,8 @@ public class SpringDataRedisCache<K, V> extends FluxAbstractValueAdaptingCache<K
             @SuppressWarnings("unchecked")
             public <K1, V1> Object execute(RedisOperations<K1, V1> operations) {
                 for (Map.Entry<K, V> entry : map.entrySet()) {
-                    Long ttl = getTtl();
                     operations.opsForValue().set(
-                            (K1) buildKey(entry.getKey()), (V1) entry.getValue(),
-                            Duration.of(ttl, cacheable.getUnit().toChronoUnit()));
+                            (K1) buildKey(entry.getKey()), (V1) entry.getValue(), effectiveTtl());
                 }
                 return null;
             }
@@ -105,8 +105,7 @@ public class SpringDataRedisCache<K, V> extends FluxAbstractValueAdaptingCache<K
 
     @Override
     protected void putValue(K key, Object value) {
-        Long ttl = getTtl();
-        redisTemplate.opsForValue().set(buildKey(key), value, Duration.of(ttl, cacheable.getUnit().toChronoUnit()));
+        redisTemplate.opsForValue().set(buildKey(key), value, effectiveTtl());
         if (log.isDebugEnabled()) {
             log.debug("redis put cache name {} key {}", this.redisName, buildKey(key));
         }
@@ -136,8 +135,22 @@ public class SpringDataRedisCache<K, V> extends FluxAbstractValueAdaptingCache<K
 
     @Override
     public void clear() {
-        throw new FluxCacheNotSupperException(
-                "REDIS bucket style cache does not support clear all, use batchEvict by keys instead");
+        String pattern = this.redisName + ":*";
+        List<String> toDelete = new ArrayList<>();
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            try (Cursor<byte[]> cursor = connection.scan(
+                    ScanOptions.scanOptions().match(pattern).count(500).build())) {
+                while (cursor.hasNext()) {
+                    // key serializer is StringRedisSerializer, raw bytes are plain UTF-8
+                    toDelete.add(new String(cursor.next(), java.nio.charset.StandardCharsets.UTF_8));
+                }
+            }
+            return null;
+        });
+        if (!toDelete.isEmpty()) {
+            redisTemplate.delete(toDelete);
+        }
+        log.info("clear redis cache name {} keys {}", this.redisName, toDelete.size());
     }
 
     private String buildKey(Object key) {
@@ -147,12 +160,7 @@ public class SpringDataRedisCache<K, V> extends FluxAbstractValueAdaptingCache<K
         return String.join(":", this.redisName, key.toString());
     }
 
-    private Long getTtl() {
-        Long ttl = this.cacheable.getTtl();
-        if (Objects.equals(this.cacheable.getUnit(), TimeUnit.MINUTES)
-                || Objects.equals(this.cacheable.getUnit(), TimeUnit.SECONDS)) {
-            ttl = ttl + RandomUtils.nextInt(1, 10);
-        }
-        return ttl;
+    private Duration effectiveTtl() {
+        return TtlUtils.randomizedTtl(this.cacheable.getTtl(), this.cacheable.getUnit());
     }
 }

@@ -56,7 +56,8 @@ public class FluxMultiLevelCache<K, V> extends FluxAbstractValueAdaptingCache<K,
             Map<K, V> second = fluxSecondaryCache.getValues(remain);
             if (second != null && !second.isEmpty()) {
                 res.putAll(second);
-                fluxFirstCache.putAllAsync(second);
+                // promote without publishing cluster-wide put events
+                fluxFirstCache.putAllDirectly(second);
             }
         }
         return res;
@@ -115,20 +116,42 @@ public class FluxMultiLevelCache<K, V> extends FluxAbstractValueAdaptingCache<K,
     }
 
     @Override
+    public void putDirectly(K key, Object value) {
+        fluxFirstCache.putDirectly(key, value);
+    }
+
+    @Override
+    public void evictDirectly(K key) {
+        fluxFirstCache.evictDirectly(key);
+    }
+
+    @Override
+    public void batchEvictDirectly(List<K> keys) {
+        fluxFirstCache.batchEvictDirectly(keys);
+    }
+
+    @Override
+    public boolean clearDirectly() {
+        return fluxFirstCache.clearDirectly();
+    }
+
+    @Override
     protected void evictValue(K key) {
-        fluxFirstCache.evict(key);
+        // delete shared L2 first, then invalidate local L1 + broadcast,
+        // otherwise a concurrent reader refills L1 from the not-yet-deleted stale L2
         fluxSecondaryCache.evict(key);
+        fluxFirstCache.evict(key);
     }
 
     @Override
     protected void batchEvictValue(List<K> keys) {
-        fluxFirstCache.batchEvict(keys);
         fluxSecondaryCache.batchEvict(keys);
+        fluxFirstCache.batchEvict(keys);
     }
 
     @Override
     public void clear() {
-        fluxFirstCache.clear();
         fluxSecondaryCache.clear();
+        fluxFirstCache.clear();
     }
 }

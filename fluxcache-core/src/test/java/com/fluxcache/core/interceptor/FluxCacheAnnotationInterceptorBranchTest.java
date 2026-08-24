@@ -282,29 +282,39 @@ public class FluxCacheAnnotationInterceptorBranchTest {
     }
 
     @Test
-    public void spelExpressionFailure_fallbackKey() throws Throwable {
+    public void spelExpressionFailure_failsFast() throws Throwable {
         when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#bogus[0]"));
         AtomicInteger loads = new AtomicInteger();
 
-        interceptor.invoke(invocation(() -> {
-            loads.incrementAndGet();
-            return "v";
-        }, "k1"));
+        try {
+            interceptor.invoke(invocation(() -> {
+                loads.incrementAndGet();
+                return "v";
+            }, "k1"));
+            org.junit.Assert.fail("expected IllegalStateException for broken SpEL key");
+        } catch (IllegalStateException expected) {
+            // fail fast: a shared fallback key would poison data across callers
+        }
 
-        assertEquals(1, loads.get());
+        assertEquals(0, loads.get());
     }
 
     @Test
-    public void emptyKeyExpression_nullKey_doLoad() throws Throwable {
+    public void emptyKeyExpression_failsFast() throws Throwable {
         when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp(""));
         AtomicInteger loads = new AtomicInteger();
 
-        interceptor.invoke(invocation(() -> {
-            loads.incrementAndGet();
-            return "v";
-        }, "k1"));
+        try {
+            interceptor.invoke(invocation(() -> {
+                loads.incrementAndGet();
+                return "v";
+            }, "k1"));
+            org.junit.Assert.fail("expected IllegalStateException for blank cache key");
+        } catch (IllegalStateException expected) {
+            // fail fast before the method executes
+        }
 
-        assertEquals(1, loads.get());
+        assertEquals(0, loads.get());
     }
 
     @Test
@@ -328,7 +338,7 @@ public class FluxCacheAnnotationInterceptorBranchTest {
         when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
         CompletableFuture<Object> leader = new CompletableFuture<>();
         leader.complete("leader-value");
-        seedSingleFlight("branch-cache::k1", leader);
+        seedSingleFlight(flightKey(), leader);
         AtomicInteger loads = new AtomicInteger();
 
         Object result = interceptor.invoke(invocation(() -> {
@@ -345,7 +355,7 @@ public class FluxCacheAnnotationInterceptorBranchTest {
         when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
         CompletableFuture<Object> leader = new CompletableFuture<>();
         leader.completeExceptionally(new IllegalStateException("leader-down"));
-        seedSingleFlight("branch-cache::k1", leader);
+        seedSingleFlight(flightKey(), leader);
 
         Object result = interceptor.invoke(invocation(() -> "own-value", "k1"));
 
@@ -357,7 +367,7 @@ public class FluxCacheAnnotationInterceptorBranchTest {
     public void singleFlight_timeout_fallsBackToOwnLoad() throws Throwable {
         when(opSource.getCacheOperation(any(), any())).thenReturn(cacheableOp("#name"));
         CompletableFuture<Object> leader = new CompletableFuture<>();
-        seedSingleFlight("branch-cache::k1", leader);
+        seedSingleFlight(flightKey(), leader);
         properties.setSingleFlightTimeoutMillis(1);
 
         Object result = interceptor.invoke(invocation(() -> "own-value", "k1"));
@@ -397,6 +407,12 @@ public class FluxCacheAnnotationInterceptorBranchTest {
         java.lang.reflect.Field f = FluxCacheAnnotationInterceptor.class.getDeclaredField("singleFlightMap");
         f.setAccessible(true);
         ((java.util.Map<String, CompletableFuture<Object>>) f.get(interceptor)).put(key, future);
+    }
+
+    private String flightKey() throws Exception {
+        // flightKey = cacheName + "::" + method.toGenericString() + "::" + key
+        java.lang.reflect.Method m = Target.class.getMethod("load", String.class);
+        return "branch-cache::" + m.toGenericString() + "::k1";
     }
 
     public static class Target {

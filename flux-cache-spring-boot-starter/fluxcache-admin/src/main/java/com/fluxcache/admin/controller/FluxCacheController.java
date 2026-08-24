@@ -62,6 +62,10 @@ public class FluxCacheController {
      */
     @GetMapping("/getAllStatics")
     public FluxCacheAllStaticsVO getAllStatics(@RequestParam String cacheName) {
+        // unknown cacheName must not allocate a new stats entry in the live monitor map
+        if (cacheManager.getCacheMetaData(cacheName) == null) {
+            return new FluxCacheAllStaticsVO(cacheName, null);
+        }
         FluxCacheAllStaticsVO vo = new FluxCacheAllStaticsVO(cacheName, cacheManager.getCacheStatics(cacheName));
         return vo;
     }

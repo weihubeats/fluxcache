@@ -11,31 +11,36 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RTopic;
 import org.redisson.api.RedissonClient;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.core.Ordered;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.ObjectUtils;
 
 import java.util.Objects;
 
 @Slf4j
 @RequiredArgsConstructor
-public class RedissonLocalCacheEvictListener implements ApplicationRunner, Ordered {
+public class RedissonLocalCacheEvictListener implements InitializingBean, DisposableBean {
 
     private final FluxCacheManager cacheManager;
     private final FluxCacheProperties cacheProperties;
     private final RedissonClient redissonClient;
 
+    private int listenerId = -1;
+
     @Override
-    public void run(ApplicationArguments args) {
-        final String topicName = DeleteCacheDTO.topicName(cacheProperties.namespace(), DeleteCacheDTO.CACHE_EVICT_TOPIC_PREFIX);
+    public void afterPropertiesSet() {
+        String topicName = DeleteCacheDTO.topicName(cacheProperties.namespace(), DeleteCacheDTO.CACHE_EVICT_TOPIC_PREFIX);
         RTopic topic = redissonClient.getTopic(topicName);
-        topic.addListener(DeleteCacheDTO.class, this::onMessage);
+        this.listenerId = topic.addListener(DeleteCacheDTO.class, this::onMessage);
     }
 
     @Override
-    public int getOrder() {
-        return 0;
+    public void destroy() {
+        if (listenerId >= 0) {
+            redissonClient.getTopic(
+                    DeleteCacheDTO.topicName(cacheProperties.namespace(), DeleteCacheDTO.CACHE_EVICT_TOPIC_PREFIX))
+                    .removeListener(listenerId);
+        }
     }
 
     private void onMessage(CharSequence channel, DeleteCacheDTO deleteCacheDTO) {

@@ -136,10 +136,12 @@ public class FluxProxyCacheAutoConfigurationTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void warmUpRunner_builtWithBeanMap() {
         Map<String, Object> beans = new HashMap<>();
         beans.put("svc", new Object());
-        FluxCacheWarmUpRunner runner = config.fluxCacheWarmUpRunner(properties, beans);
+        ObjectProvider<Map<String, Object>> provider = mock(ObjectProvider.class);
+        FluxCacheWarmUpRunner runner = config.fluxCacheWarmUpRunner(properties, provider);
         assertNotNull(runner);
     }
 }

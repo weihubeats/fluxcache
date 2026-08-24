@@ -69,7 +69,11 @@ public class RedissonBucketCacheTest {
         when(redissonClient.getBucket(buildKey(key))).thenReturn(bucket);
 
         cache.putValue(key, "Alice");
-        verify(bucket).set(eq("Alice"), anyLong(), eq(cacheable.getUnit()));
+        // proportional jitter: ttl within [base, base + 10%]
+        verify(bucket).set(eq("Alice"), argThat((java.time.Duration d) ->
+                d != null
+                        && d.toSeconds() >= cacheable.getTtl()
+                        && d.toSeconds() <= cacheable.getTtl() + cacheable.getTtl() / 10));
     }
 
     @Test
@@ -102,12 +106,21 @@ public class RedissonBucketCacheTest {
         assertEquals("Alice", result.get("user:1"));
     }
 
-    @Test(expected = com.fluxcache.core.exception.FluxCacheNotSupperException.class)
-    public void clear_throws() {
+    @Test
+    public void clear_scansAndDeletesByPrefix() {
         FluxCacheCacheable cacheable = buildCacheable();
         RedissonBucketCache<String, String> cache = new RedissonBucketCache<>(
                 true, redissonClient, cacheable);
+
+        org.redisson.api.RKeys keys = mock(org.redisson.api.RKeys.class);
+        when(redissonClient.getKeys()).thenReturn(keys);
+        when(keys.getKeysByPattern("FluxCache:testCache:*", 500))
+                .thenReturn(List.of(buildKey("user:1"), buildKey("user:2")));
+
         cache.clear();
+
+        // single batched delete of all scanned keys
+        verify(keys).delete(buildKey("user:1"), buildKey("user:2"));
     }
 
     @Test(expected = IllegalArgumentException.class)

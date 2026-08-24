@@ -138,13 +138,35 @@ public class SpringDataRedisCacheTest {
         verify(redisTemplate).delete((Collection<String>) any());
     }
 
-    @Test(expected = com.fluxcache.core.exception.FluxCacheNotSupperException.class)
-    public void clear_throws() {
+    public void clear_scansAndDeletesByPrefix() throws Exception {
         FluxCacheCacheable cacheable = buildCacheable();
         SpringDataRedisCache<String, String> cache = new SpringDataRedisCache<>(
                 true, redisTemplate, cacheable);
 
+        java.util.Iterator<byte[]> found = java.util.Arrays.asList(
+                "FluxCache:testCache:a".getBytes(),
+                "FluxCache:testCache:b".getBytes()).iterator();
+        org.springframework.data.redis.core.Cursor<byte[]> cursor =
+                org.mockito.Mockito.mock(org.springframework.data.redis.core.Cursor.class);
+        org.mockito.Mockito.when(cursor.hasNext()).thenReturn(true, true, false);
+        org.mockito.Mockito.when(cursor.next())
+                .thenReturn(found.next(), found.next());
+
+        org.springframework.data.redis.connection.RedisConnection connection =
+                org.mockito.Mockito.mock(org.springframework.data.redis.connection.RedisConnection.class);
+        org.mockito.Mockito.when(connection.scan(org.mockito.ArgumentMatchers.any(
+                        org.springframework.data.redis.core.ScanOptions.class))).thenReturn(cursor);
+
+        org.mockito.Mockito.when(redisTemplate.execute(org.mockito.ArgumentMatchers.any(
+                        org.springframework.data.redis.core.RedisCallback.class)))
+                .thenAnswer(inv -> inv.getArgument(0,
+                        org.springframework.data.redis.core.RedisCallback.class).doInRedis(connection));
+
         cache.clear();
+
+        org.mockito.Mockito.verify(redisTemplate).delete(
+                org.mockito.ArgumentMatchers.argThat((java.util.Collection<String> list) ->
+                        list != null && list.size() == 2));
     }
 
     @Test(expected = IllegalArgumentException.class)

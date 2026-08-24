@@ -27,7 +27,7 @@ public class RedissonCacheSyncStrategy implements CacheSyncStrategy {
         try {
             topic.publish(deleteCacheDTO);
         } catch (Exception e) {
-            log.info("分布式缓存刷新通知异常,缓存 {}", deleteCacheDTO, e);
+            log.warn("分布式缓存清空通知异常,缓存 {}", deleteCacheDTO, e);
         }
         postProcess(deleteCacheDTO);
     }
@@ -38,7 +38,7 @@ public class RedissonCacheSyncStrategy implements CacheSyncStrategy {
         try {
             topic.publish(deleteCacheDTO);
         } catch (Exception e) {
-            log.info("分布式缓存刷新通知异常,缓存 {}", JsonUtil.serialize2Json(deleteCacheDTO), e);
+            log.warn("分布式缓存刷新通知异常,缓存 {}", JsonUtil.serialize2Json(deleteCacheDTO), e);
         }
         postProcess(deleteCacheDTO);
     }
@@ -49,7 +49,7 @@ public class RedissonCacheSyncStrategy implements CacheSyncStrategy {
         try {
             topic.publish(putCacheDTO);
         } catch (Exception e) {
-            log.info("分布式缓存刷新通知异常,缓存 {}", putCacheDTO, e);
+            log.warn("分布式缓存更新通知异常,缓存 {}", putCacheDTO, e);
         }
         postProcess(putCacheDTO);
     }

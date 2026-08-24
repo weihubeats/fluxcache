@@ -142,7 +142,7 @@ echo "=============================================="
 if [ "$SNAPSHOT" = true ]; then
     mvn -s "$SETTINGS" clean install -DskipTests=false -Dmaven.test.skip=false -Dgpg.skip=true
 else
-    mvn -s "$SETTINGS" clean install -DskipTests=false -Dmaven.test.skip=false
+    mvn -s "$SETTINGS" clean install -P release -DskipTests=false -Dmaven.test.skip=false
 fi
 
 # 6. 部署到 Central Portal
@@ -153,7 +153,7 @@ echo "=============================================="
 if [ "$SNAPSHOT" = true ]; then
     mvn -s "$SETTINGS" deploy -DskipTests=false -Dgpg.skip=true -Dmaven.test.skip=false
 else
-    mvn -s "$SETTINGS" deploy -DskipTests=false -Dmaven.test.skip=false
+    mvn -s "$SETTINGS" deploy -P release -DskipTests=false -Dmaven.test.skip=false
 fi
 
 echo ""

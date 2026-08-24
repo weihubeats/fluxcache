@@ -15,17 +15,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
+import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
-import org.springframework.util.SimpleIdGenerator;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
@@ -56,14 +55,14 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
     // SpEL 缓存：method + rawExpression -> compiled Expression
     private final Map<String, Expression> expressionCache = new ConcurrentHashMap<>();
 
-    private final LocalVariableTableParameterNameDiscoverer nameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
+    private final ParameterNameDiscoverer nameDiscoverer = new DefaultParameterNameDiscoverer();
 
     // 单飞(single-flight)防护：cacheName::key -> 正在进行的加载
     private final Map<String, CompletableFuture<Object>> singleFlightMap = new ConcurrentHashMap<>();
 
     @Nullable
     @Override
-    public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
+    public Object invoke(MethodInvocation invocation) throws Throwable {
         Method method = invocation.getMethod();
         Object target = invocation.getThis();
         Assert.state(target != null, "Target must not be null");
@@ -158,7 +157,6 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
                 publish(op.getCacheName(), MonitorEventEnum.CACHE_MISSING, key, 1, 0, false);
             }
         } else {
-            publish(op.getCacheName(), MonitorEventEnum.CACHE_PUT, key, 1, 0, true);
             if (log.isDebugEnabled()) {
                 log.debug("[FluxCache] FORCE_REFRESH skip cache read cache={} key={}", op.getCacheName(), key);
             }
@@ -184,7 +182,7 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
                                         boolean allowCacheNull,
                                         boolean allowEmptyOptional,
                                         boolean force) {
-        String flightKey = op.getCacheName() + "::" + key;
+        String flightKey = op.getCacheName() + "::" + method.toGenericString() + "::" + key;
         CompletableFuture<Object> future = new CompletableFuture<>();
         CompletableFuture<Object> leader = singleFlightMap.putIfAbsent(flightKey, future);
         if (leader == null) {
@@ -337,7 +335,13 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
         String rawExpression = op.getKey();
         Object target = contexts.getTarget();
         if (ObjectUtils.isEmpty(rawExpression)) {
-            return null;
+            // empty key only allowed for evict (clear-all semantics);
+            // otherwise caching under a null key would corrupt or NPE after method execution
+            if (op instanceof FluxCacheEvictOperation) {
+                return null;
+            }
+            throw new IllegalStateException(
+                    "FluxCache key is blank on method [" + method + "], specify a SpEL key expression");
         }
 
         try {
@@ -358,14 +362,18 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
             context.setVariable("method", method);
             Object value = exp.getValue(context);
             if (value == null) {
-                // 返回 null key 不安全，给一个随机或固定 fallback
-                return "NullKeyFallback:" + new SimpleIdGenerator().generateId();
+                // a shared or random fallback key would poison data across callers - fail fast
+                throw new IllegalStateException(
+                        "FluxCache key expression '" + rawExpression + "' evaluated to null on method ["
+                                + method.getName() + "]");
             }
             return value.toString();
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("[FluxCache] Key SpEL 解析失败 expression='{}' method={} 使用 fallback key",
-                    rawExpression, method.getName(), e);
-            return "SpelErrorKey:" + method.getName();
+            // a shared fallback key would serve caller A's cached value to caller B - fail fast
+            throw new IllegalStateException("FluxCache key SpEL 解析失败 expression='" + rawExpression
+                    + "' method=" + method.getName(), e);
         }
     }
 

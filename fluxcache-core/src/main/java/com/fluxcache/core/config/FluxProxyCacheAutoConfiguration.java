@@ -37,7 +37,6 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.util.List;
-import java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy;
 import java.util.Map;
 
 /**
@@ -116,7 +115,7 @@ public class FluxProxyCacheAutoConfiguration {
         FluxCacheProperties.MonitoringConfig mon = cacheProperties.getMonitoring();
         return new CacheThreadPoolExecutor(mon.getMonitorCorePoolSize(), mon.getMonitorMaxPoolSize(),
             mon.getMonitorQueueSize(), ThreadPoolConstant.DEFAULT_KEEP_ALIVE_TIME,
-            ThreadPoolConstant.DEFAULT_THREAD_NAME_PREFIX, new DiscardOldestPolicy());
+            ThreadPoolConstant.DEFAULT_THREAD_NAME_PREFIX, new CountingDiscardOldestPolicy());
     }
 
     @Bean
@@ -146,8 +145,9 @@ public class FluxProxyCacheAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(prefix = FluxCacheProperties.FLUX_CACHE, name = "warmUpEnable", havingValue = "true")
     public FluxCacheWarmUpRunner fluxCacheWarmUpRunner(FluxCacheProperties properties,
-                                                        Map<String, Object> beanMap) {
+                                                        ObjectProvider<Map<String, Object>> beanMap) {
         return new FluxCacheWarmUpRunner(properties, beanMap);
     }
 }

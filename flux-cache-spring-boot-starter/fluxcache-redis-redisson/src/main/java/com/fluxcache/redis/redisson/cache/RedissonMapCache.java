@@ -2,16 +2,16 @@ package com.fluxcache.redis.redisson.cache;
 
 import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.model.FluxCacheCacheable;
+import com.fluxcache.core.utils.TtlUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomUtils;
 import org.redisson.api.RFuture;
 import org.redisson.api.RMapCache;
 import org.redisson.api.RedissonClient;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -44,19 +44,14 @@ public class RedissonMapCache<K, V> extends FluxAbstractValueAdaptingCache<K, V>
 
     @Override
     protected void putValue(K key, Object value) {
-        getPutRMapCache().put(key, value, getTtl(), this.cacheable.getUnit());
+        getPutRMapCache().put(key, value, effectiveTtl().toMillis(), TimeUnit.MILLISECONDS);
         if (log.isDebugEnabled()) {
             log.debug("redis put key {} value {}", key, value);
         }
     }
 
-    private Long getTtl() {
-        Long ttl = this.cacheable.getTtl();
-        if (Objects.equals(this.cacheable.getUnit(), TimeUnit.MINUTES)
-                || Objects.equals(this.cacheable.getUnit(), TimeUnit.SECONDS)) {
-            ttl = ttl + RandomUtils.nextInt(1, 10);
-        }
-        return ttl;
+    private Duration effectiveTtl() {
+        return TtlUtils.randomizedTtl(this.cacheable.getTtl(), this.cacheable.getUnit());
     }
 
     @Override
@@ -66,8 +61,13 @@ public class RedissonMapCache<K, V> extends FluxAbstractValueAdaptingCache<K, V>
 
     @Override
     protected void batchEvictValue(List<K> keys) {
-        RMapCache<K, V> cache = getRMapCache();
-        keys.forEach(cache::remove);
+        if (keys == null || keys.isEmpty()) {
+            return;
+        }
+        // single round trip instead of N removes
+        @SuppressWarnings("unchecked")
+        K[] keyArray = (K[]) keys.toArray();
+        getRMapCache().fastRemove(keyArray);
     }
 
     @Override
@@ -93,12 +93,23 @@ public class RedissonMapCache<K, V> extends FluxAbstractValueAdaptingCache<K, V>
 
     @Override
     protected void putValues(Map<K, V> map) {
-        getRMapCache().putAll(map, getTtl(), this.cacheable.getUnit());
+        if (map == null || map.isEmpty()) {
+            return;
+        }
+        getRMapCache().putAll(map, effectiveTtl().toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override
     protected void putValuesAsync(Map<K, V> map) {
-        getRMapCache().putAllAsync(map, getTtl(), this.cacheable.getUnit());
+        if (map == null || map.isEmpty()) {
+            return;
+        }
+        getRMapCache().putAllAsync(map, effectiveTtl().toMillis(), TimeUnit.MILLISECONDS)
+                .whenComplete((r, e) -> {
+                    if (e != null) {
+                        log.warn("redis async putAll failed cache name {}", this.redisName, e);
+                    }
+                });
     }
 
     @Override
@@ -108,6 +119,8 @@ public class RedissonMapCache<K, V> extends FluxAbstractValueAdaptingCache<K, V>
 
     @Override
     protected V lookup(K key) {
-        return fromStoreValue(getRMapCache().get(key));
+        // raw store value: keep FluxNullValue marker so the multi-level cache can
+        // distinguish "hit with null" (penetration protection) from a real miss
+        return getRMapCache().get(key);
     }
 }

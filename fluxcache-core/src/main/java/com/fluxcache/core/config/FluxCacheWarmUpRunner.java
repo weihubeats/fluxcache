@@ -1,36 +1,36 @@
 package com.fluxcache.core.config;
 
-import com.fluxcache.core.annotation.FluxCacheEvict;
-import com.fluxcache.core.annotation.FluxCachePut;
 import com.fluxcache.core.annotation.FluxCacheable;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 应用启动后自动调用带缓存注解的方法，生成监控数据，避免 Dashboard 为空。
+ * 应用启动后自动调用带 {@link FluxCacheable} 注解的方法，生成监控数据，避免 Dashboard 为空。
  * 默认关闭，通过 {@code flux.cache.warmUpEnable=true} 开启。
  *
- * <p>扫描所有 Bean 中带有 {@link FluxCacheable}/{@link FluxCachePut}/{@link FluxCacheEvict}
- * 注解的方法，使用默认参数调用，使监控统计数据在启动后立即可见。
+ * <p>只预热只读的 {@link FluxCacheable} 方法；{@link FluxCachePut}/{@link FluxCacheEvict}
+ * 具有业务副作用，不会被执行。调用在独立线程中异步执行，不阻塞启动流程。
  */
 @Slf4j
 public class FluxCacheWarmUpRunner {
 
     private final FluxCacheProperties properties;
-    private final Map<String, Object> beanMap;
+    private final ObjectProvider<Map<String, Object>> beansProvider;
 
     public FluxCacheWarmUpRunner(FluxCacheProperties properties,
-                                  Map<String, Object> beanMap) {
+                                  ObjectProvider<Map<String, Object>> beansProvider) {
         this.properties = properties;
-        this.beanMap = beanMap;
+        this.beansProvider = beansProvider;
     }
 
     @EventListener
@@ -38,6 +38,12 @@ public class FluxCacheWarmUpRunner {
         if (!properties.isWarmUpEnable()) {
             return;
         }
+        Thread worker = new Thread(this::runWarmUp, "flux-cache-warm-up");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    private void runWarmUp() {
         int delay = properties.getWarmUpDelaySeconds();
         if (delay > 0) {
             try {
@@ -51,10 +57,11 @@ public class FluxCacheWarmUpRunner {
     }
 
     private void doWarmUp() {
+        Map<String, Object> beanMap = beansProvider.getIfAvailable(Collections::emptyMap);
         if (beanMap == null || beanMap.isEmpty()) {
             return;
         }
-        List<Method> methods = collectCacheMethods();
+        List<Method> methods = collectCacheMethods(beanMap);
         if (methods.isEmpty()) {
             log.info("[FluxCache] warmUp 未发现带缓存注解的方法，跳过");
             return;
@@ -64,7 +71,7 @@ public class FluxCacheWarmUpRunner {
         int fail = 0;
         for (Method method : methods) {
             try {
-                invokeMethod(method);
+                invokeMethod(beanMap, method);
                 success++;
             } catch (Exception e) {
                 fail++;
@@ -75,12 +82,13 @@ public class FluxCacheWarmUpRunner {
         log.info("[FluxCache] 缓存预热完成: success={}, fail={}", success, fail);
     }
 
-    private List<Method> collectCacheMethods() {
+    private List<Method> collectCacheMethods(Map<String, Object> beanMap) {
         List<Method> result = new ArrayList<>();
         for (Object bean : beanMap.values()) {
             Class<?> clazz = AopUtils.getTargetClass(bean);
             for (Method method : clazz.getDeclaredMethods()) {
-                if (hasCacheAnnotation(method)) {
+                // 只预热只读方法；Put/Evict 有副作用，不能在启动阶段用伪造参数执行
+                if (method.isAnnotationPresent(FluxCacheable.class)) {
                     result.add(method);
                 }
             }
@@ -88,22 +96,9 @@ public class FluxCacheWarmUpRunner {
         return result;
     }
 
-    private boolean hasCacheAnnotation(Method method) {
-        if (method.isAnnotationPresent(FluxCacheable.class)) {
-            return true;
-        }
-        if (method.isAnnotationPresent(FluxCachePut.class)) {
-            return true;
-        }
-        if (method.isAnnotationPresent(FluxCacheEvict.class)) {
-            return true;
-        }
-        return false;
-    }
-
     @SuppressWarnings("unchecked")
-    private void invokeMethod(Method method) throws Exception {
-        Object bean = findBean(method.getDeclaringClass());
+    private void invokeMethod(Map<String, Object> beanMap, Method method) throws Exception {
+        Object bean = findBean(beanMap, method.getDeclaringClass());
         if (bean == null) {
             return;
         }
@@ -145,7 +140,7 @@ public class FluxCacheWarmUpRunner {
         return null;
     }
 
-    private Object findBean(Class<?> clazz) {
+    private Object findBean(Map<String, Object> beanMap, Class<?> clazz) {
         for (Object bean : beanMap.values()) {
             if (bean != null && clazz.isAssignableFrom(AopUtils.getTargetClass(bean))) {
                 return bean;

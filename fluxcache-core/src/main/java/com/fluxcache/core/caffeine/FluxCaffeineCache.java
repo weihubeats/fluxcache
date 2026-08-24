@@ -7,11 +7,11 @@ import com.fluxcache.core.model.PutCacheDTO;
 import com.fluxcache.core.properties.FluxCacheProperties;
 import com.fluxcache.core.utils.JsonUtil;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -161,6 +161,11 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
     }
 
     @Override
+    public void putAllDirectly(Map<K, ?> values) {
+        this.cache.putAll(values);
+    }
+
+    @Override
     public boolean invalidate() {
         boolean notEmpty = !this.cache.asMap().isEmpty();
         this.cache.invalidateAll();
@@ -174,7 +179,7 @@ public class FluxCaffeineCache<K, V> extends FluxAbstractValueAdaptingCache<K, V
     }
 
     protected void postEvict(K key) {
-        DeleteCacheDTO deleteCacheDTO = new DeleteCacheDTO(this.name, Lists.newArrayList(key));
+        DeleteCacheDTO deleteCacheDTO = new DeleteCacheDTO(this.name, Collections.singletonList(key));
         deleteCacheDTO.setTopicName(deleteCacheDTO.topicName(fluxCacheProperties.namespace()));
         cacheSyncStrategy.postEvict(deleteCacheDTO);
     }

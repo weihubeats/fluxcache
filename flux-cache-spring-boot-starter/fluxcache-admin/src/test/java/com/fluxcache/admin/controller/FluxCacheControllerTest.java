@@ -45,11 +45,22 @@ public class FluxCacheControllerTest {
     public void getAllStatics_returnsVO() {
         FluxCacheStatics statics = mock(FluxCacheStatics.class);
         when(statics.getWindow()).thenReturn(new java.util.concurrent.ConcurrentLinkedDeque<>());
+        when(cacheManager.getCacheMetaData("testCache")).thenReturn(mock(FluxCacheOperation.class));
         when(cacheManager.getCacheStatics("testCache")).thenReturn(statics);
 
         FluxCacheAllStaticsVO result = controller.getAllStatics("testCache");
         assertNotNull(result);
         assertEquals("testCache", result.getCacheName());
+    }
+
+    @Test
+    public void getAllStatics_unknownCache_doesNotTouchMonitor() {
+        when(cacheManager.getCacheMetaData("nope")).thenReturn(null);
+
+        FluxCacheAllStaticsVO result = controller.getAllStatics("nope");
+
+        assertNotNull(result);
+        verify(cacheManager, never()).getCacheStatics("nope");
     }
 
     @Test

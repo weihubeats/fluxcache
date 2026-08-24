@@ -22,7 +22,9 @@ public class RedissonDistributedLock implements FluxDistributedLock {
     public boolean tryLock(String key, long waitSeconds, long leaseSeconds) {
         RLock lock = redissonClient.getLock(key);
         try {
-            boolean locked = lock.tryLock(waitSeconds, leaseSeconds, TimeUnit.SECONDS);
+            // leaseTime <= 0 would silently enable the Redisson watchdog (lock held until process death);
+            // clamp to >= 1s for parity with the spring-data-redis implementation
+            boolean locked = lock.tryLock(waitSeconds, Math.max(leaseSeconds, 1), TimeUnit.SECONDS);
             if (locked) {
                 heldLocks.put(key, lock);
             }

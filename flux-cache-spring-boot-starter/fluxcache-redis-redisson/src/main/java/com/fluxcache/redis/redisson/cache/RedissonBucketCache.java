@@ -1,22 +1,21 @@
 package com.fluxcache.redis.redisson.cache;
 
-import com.fluxcache.core.exception.FluxCacheNotSupperException;
 import com.fluxcache.core.impl.FluxAbstractValueAdaptingCache;
 import com.fluxcache.core.model.FluxCacheCacheable;
+import com.fluxcache.core.utils.TtlUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomUtils;
 import org.redisson.api.RBatch;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.util.ObjectUtils;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -64,22 +63,26 @@ public class RedissonBucketCache<K, V> extends FluxAbstractValueAdaptingCache<K,
 
     @Override
     protected void putValues(Map<K, V> map) {
-        if (!ObjectUtils.isEmpty(map)) {
-            map.forEach((k, v) -> {
-                RBucket<V> bucket = this.redissonClient.getBucket(buildKey(k));
-                bucket.set(v, getTtl(), this.cacheable.getUnit());
-            });
+        if (ObjectUtils.isEmpty(map)) {
+            return;
         }
+        // one batch round trip instead of N SETs
+        RBatch batch = this.redissonClient.createBatch();
+        map.forEach((k, v) -> batch.getBucket(buildKey(k)).setAsync(v, effectiveTtl()));
+        batch.execute();
     }
 
     @Override
     protected void putValuesAsync(Map<K, V> map) {
-        if (!ObjectUtils.isEmpty(map)) {
-            map.forEach((k, v) -> {
-                RBucket<V> bucket = this.redissonClient.getBucket(buildKey(k));
-                bucket.setAsync(v, getTtl(), this.cacheable.getUnit());
-            });
+        if (ObjectUtils.isEmpty(map)) {
+            return;
         }
+        map.forEach((k, v) -> this.redissonClient.getBucket(buildKey(k)).setAsync(v, effectiveTtl())
+                .whenComplete((r, e) -> {
+                    if (e != null) {
+                        log.warn("redis async put failed cache name {} key {}", this.redisName, buildKey(k), e);
+                    }
+                }));
     }
 
     @Override
@@ -92,7 +95,7 @@ public class RedissonBucketCache<K, V> extends FluxAbstractValueAdaptingCache<K,
     @SuppressWarnings("unchecked")
     protected void putValue(K key, Object value) {
         RBucket<V> bucket = this.redissonClient.getBucket(buildKey(key));
-        bucket.set((V) value, getTtl(), this.cacheable.getUnit());
+        bucket.set((V) value, effectiveTtl());
         if (log.isDebugEnabled()) {
             log.debug("redis put cache name {} key {}", this.redisName, buildKey(key));
         }
@@ -120,8 +123,16 @@ public class RedissonBucketCache<K, V> extends FluxAbstractValueAdaptingCache<K,
 
     @Override
     public void clear() {
-        throw new FluxCacheNotSupperException(
-                "bucket not support clear all, use batchEvict by keys instead");
+        String pattern = this.redisName + ":*";
+        List<String> toDelete = new ArrayList<>();
+        for (String key : this.redissonClient.getKeys().getKeysByPattern(pattern, 500)) {
+            toDelete.add(key);
+        }
+        for (int i = 0; i < toDelete.size(); i += 500) {
+            List<String> chunk = toDelete.subList(i, Math.min(i + 500, toDelete.size()));
+            this.redissonClient.getKeys().delete(chunk.toArray(new String[0]));
+        }
+        log.info("clear redis cache name {} keys {}", this.redisName, toDelete.size());
     }
 
     private String buildKey(Object key) {
@@ -131,12 +142,7 @@ public class RedissonBucketCache<K, V> extends FluxAbstractValueAdaptingCache<K,
         return String.join(":", this.redisName, key.toString());
     }
 
-    private Long getTtl() {
-        Long ttl = this.cacheable.getTtl();
-        if (Objects.equals(this.cacheable.getUnit(), TimeUnit.MINUTES)
-                || Objects.equals(this.cacheable.getUnit(), TimeUnit.SECONDS)) {
-            ttl = ttl + RandomUtils.nextInt(1, 10);
-        }
-        return ttl;
+    private Duration effectiveTtl() {
+        return TtlUtils.randomizedTtl(this.cacheable.getTtl(), this.cacheable.getUnit());
     }
 }

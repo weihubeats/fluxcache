@@ -73,7 +73,7 @@ public class FluxCacheMicrometerListener implements FluxCacheMetricsListener {
                 break;
             case CACHE_PUT:
                 if (event.getLoadTime() > 0) {
-                    metrics.loadTimer.record(event.getLoadTime(), TimeUnit.MILLISECONDS);
+                    metrics.recordLoad(event.getLoadTime(), TimeUnit.MILLISECONDS);
                 }
                 break;
             default:
@@ -134,8 +134,18 @@ public class FluxCacheMicrometerListener implements FluxCacheMetricsListener {
                         .description("Time spent loading into the cache (L2/DB)")
                         .tag(TAG_CACHE, cacheName)
                         .publishPercentileHistogram()
-                        .publishPercentiles(0.5, 0.95, 0.99)
                         .register(registry);
+            }
+        }
+
+        /**
+         * Safe against the registration race: a concurrent event may observe
+         * registered != 0 while loadTimer is still being assigned.
+         */
+        void recordLoad(long amount, TimeUnit unit) {
+            Timer timer = this.loadTimer;
+            if (timer != null) {
+                timer.record(amount, unit);
             }
         }
 

@@ -54,13 +54,44 @@ public class RedissonMapCacheTest {
     }
 
     @Test
+    public void lookup_preservesNullValueMarker() {
+        // 回归：lookup 曾多一层 fromStoreValue 把标记转成 null，穿透保护失效
+        FluxCacheCacheable cacheable = buildCacheable();
+        RedissonMapCache<String, String> cache = new RedissonMapCache<>(
+                true, redissonClient, cacheable);
+
+        when(rMapCache.get("user:1")).thenReturn(com.fluxcache.core.model.FluxNullValue.INSTANCE);
+
+        assertSame(com.fluxcache.core.model.FluxNullValue.INSTANCE, cache.lookup("user:1"));
+    }
+
+    @Test
+    public void get_nullMarker_returnsNonNullWrapperWithNullValue() {
+        FluxCacheCacheable cacheable = buildCacheable();
+        RedissonMapCache<String, String> cache = new RedissonMapCache<>(
+                true, redissonClient, cacheable);
+
+        when(rMapCache.get("user:1")).thenReturn(com.fluxcache.core.model.FluxNullValue.INSTANCE);
+
+        com.fluxcache.core.FluxCache.ValueWrapper<String> wrapper = cache.get("user:1");
+        assertNotNull(wrapper);
+        assertNull(wrapper.get());
+    }
+
+    @Test
     public void putValue_setsTtl() {
         FluxCacheCacheable cacheable = buildCacheable();
         RedissonMapCache<String, String> cache = new RedissonMapCache<>(
                 true, redissonClient, cacheable);
 
         cache.putValue("user:1", "Alice");
-        verify(rMapCache).put(eq("user:1"), eq("Alice"), anyLong(), eq(cacheable.getUnit()));
+        // proportional jitter: ttl within [base, base + 10%]
+        verify(rMapCache).put(eq("user:1"), eq("Alice"),
+                longThat((Long ms) -> ms != null
+                        && ms >= java.util.concurrent.TimeUnit.SECONDS.toMillis(cacheable.getTtl())
+                        && ms <= java.util.concurrent.TimeUnit.SECONDS.toMillis(
+                                cacheable.getTtl() + cacheable.getTtl() / 10)),
+                eq(java.util.concurrent.TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -81,8 +112,8 @@ public class RedissonMapCacheTest {
 
         List<String> keys = List.of("user:1", "user:2");
         cache.batchEvictValue(keys);
-        verify(rMapCache).remove("user:1");
-        verify(rMapCache).remove("user:2");
+        // single round trip
+        verify(rMapCache).fastRemove("user:1", "user:2");
     }
 
     @Test

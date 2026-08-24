@@ -25,7 +25,11 @@ public class RedisTemplateCacheSyncStrategy implements CacheSyncStrategy {
 
     @Override
     public void postClear(DeleteCacheDTO deleteCacheDTO) {
-        publish(deleteCacheDTO.getTopicName(), deleteCacheDTO);
+        try {
+            publish(deleteCacheDTO.getTopicName(), deleteCacheDTO);
+        } catch (Exception e) {
+            log.warn("分布式缓存清空通知异常,缓存 {}", JsonUtil.serialize2Json(deleteCacheDTO), e);
+        }
         postProcess(deleteCacheDTO);
     }
 
@@ -34,7 +38,7 @@ public class RedisTemplateCacheSyncStrategy implements CacheSyncStrategy {
         try {
             publish(deleteCacheDTO.getTopicName(), deleteCacheDTO);
         } catch (Exception e) {
-            log.info("分布式缓存刷新通知异常,缓存 {}", JsonUtil.serialize2Json(deleteCacheDTO), e);
+            log.warn("分布式缓存刷新通知异常,缓存 {}", JsonUtil.serialize2Json(deleteCacheDTO), e);
         }
         postProcess(deleteCacheDTO);
     }
@@ -44,7 +48,7 @@ public class RedisTemplateCacheSyncStrategy implements CacheSyncStrategy {
         try {
             publish(putCacheDTO.getTopicName(), putCacheDTO);
         } catch (Exception e) {
-            log.info("分布式缓存刷新通知异常,缓存 {}", putCacheDTO, e);
+            log.warn("分布式缓存更新通知异常,缓存 {}", putCacheDTO, e);
         }
         postProcess(putCacheDTO);
     }

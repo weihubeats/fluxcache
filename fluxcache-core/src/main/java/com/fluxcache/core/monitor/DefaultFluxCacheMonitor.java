@@ -121,8 +121,20 @@ public class DefaultFluxCacheMonitor implements FluxCacheMonitor {
         }
 
         Runnable task = () -> {
-            applier.accept(statics, event.getCount(), event.getLoadTime());
-            fluxCacheMetricsListeners.forEach(listener -> listener.onMonitorEvent(event));
+            try {
+                applier.accept(statics, event.getCount(), event.getLoadTime());
+            } catch (Exception e) {
+                log.warn("apply monitor statics failed cache={} type={}", event.getCacheName(), type, e);
+            }
+            // isolate listeners: one failing listener must not kill the others or the pool worker
+            for (FluxCacheMetricsListener listener : fluxCacheMetricsListeners) {
+                try {
+                    listener.onMonitorEvent(event);
+                } catch (Exception e) {
+                    log.warn("metrics listener error listener={} cache={}",
+                            listener.getClass().getSimpleName(), event.getCacheName(), e);
+                }
+            }
         };
 
         if (cacheProperties.isAsyncMonitorEnable()) {

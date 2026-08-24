@@ -1,6 +1,7 @@
 package com.fluxcache.core;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Local-only cache mutations that must not publish distributed sync events
@@ -22,5 +23,12 @@ public interface LocalCache<K, V> {
     }
 
     default void putDirectly(K key, Object value) {
+    }
+
+    /**
+     * Batch put of already store-adapted values without publishing sync events.
+     */
+    default void putAllDirectly(Map<K, ?> values) {
+        values.forEach(this::putDirectly);
     }
 }

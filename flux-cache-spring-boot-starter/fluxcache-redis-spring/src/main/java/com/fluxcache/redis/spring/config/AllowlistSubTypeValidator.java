@@ -23,6 +23,11 @@ public class AllowlistSubTypeValidator extends PolymorphicTypeValidator.Base imp
     private static final List<String> PRIMITIVE_NAMES =
             Arrays.asList("boolean", "byte", "char", "short", "int", "long", "float", "double", "void");
 
+    /**
+     * framework pub/sub DTOs must always deserialize, otherwise invalidation messages are dropped
+     */
+    private static final String FRAMEWORK_DTO_PREFIX = "com.fluxcache.core.model.";
+
     private final List<String> allowedPrefixes;
 
     public AllowlistSubTypeValidator(List<String> allowedPrefixes) {
@@ -34,10 +39,8 @@ public class AllowlistSubTypeValidator extends PolymorphicTypeValidator.Base imp
         if (subClassName == null || PRIMITIVE_NAMES.contains(subClassName)) {
             return Validity.ALLOWED;
         }
-        for (String prefix : allowedPrefixes) {
-            if (subClassName.startsWith(prefix)) {
-                return Validity.ALLOWED;
-            }
+        if (isAllowed(subClassName)) {
+            return Validity.ALLOWED;
         }
         return Validity.DENIED;
     }
@@ -45,5 +48,24 @@ public class AllowlistSubTypeValidator extends PolymorphicTypeValidator.Base imp
     @Override
     public Validity validateSubType(MapperConfig<?> config, JavaType baseType, JavaType subType) {
         return validateSubClassName(config, baseType, subType.getRawClass().getName());
+    }
+
+    private boolean isAllowed(String subClassName) {
+        if (subClassName.startsWith(FRAMEWORK_DTO_PREFIX)) {
+            return true;
+        }
+        for (String prefix : allowedPrefixes) {
+            if (prefix.endsWith(".")) {
+                if (subClassName.startsWith(prefix)) {
+                    return true;
+                }
+            } else {
+                // package boundary: "com.foo" must not admit "comfoobar.Gadget"
+                if (subClassName.equals(prefix) || subClassName.startsWith(prefix + ".")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

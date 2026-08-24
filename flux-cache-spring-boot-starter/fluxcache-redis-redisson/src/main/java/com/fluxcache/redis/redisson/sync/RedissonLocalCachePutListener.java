@@ -9,23 +9,33 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RTopic;
 import org.redisson.api.RedissonClient;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.core.Ordered;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 
 @Slf4j
 @RequiredArgsConstructor
-public class RedissonLocalCachePutListener implements ApplicationRunner, Ordered {
+public class RedissonLocalCachePutListener implements InitializingBean, DisposableBean {
 
     private final FluxCacheManager cacheManager;
     private final FluxCacheProperties cacheProperties;
     private final RedissonClient redissonClient;
 
+    private int listenerId = -1;
+
     @Override
-    public void run(ApplicationArguments args) {
-        final String topicName = PutCacheDTO.topicName(cacheProperties.namespace(), PutCacheDTO.CACHE_PUT_TOPIC_PREFIX);
+    public void afterPropertiesSet() {
+        String topicName = PutCacheDTO.topicName(cacheProperties.namespace(), PutCacheDTO.CACHE_PUT_TOPIC_PREFIX);
         RTopic topic = redissonClient.getTopic(topicName);
-        topic.addListener(PutCacheDTO.class, this::onMessage);
+        this.listenerId = topic.addListener(PutCacheDTO.class, this::onMessage);
+    }
+
+    @Override
+    public void destroy() {
+        if (listenerId >= 0) {
+            redissonClient.getTopic(
+                    PutCacheDTO.topicName(cacheProperties.namespace(), PutCacheDTO.CACHE_PUT_TOPIC_PREFIX))
+                    .removeListener(listenerId);
+        }
     }
 
     private void onMessage(CharSequence channel, PutCacheDTO putCacheDTO) {
@@ -37,10 +47,5 @@ public class RedissonLocalCachePutListener implements ApplicationRunner, Ordered
         if (log.isDebugEnabled()) {
             log.debug("caffeine put key {} cache {}", putCacheDTO.getKey(), JsonUtil.serialize2Json(putCacheDTO));
         }
-    }
-
-    @Override
-    public int getOrder() {
-        return 0;
     }
 }

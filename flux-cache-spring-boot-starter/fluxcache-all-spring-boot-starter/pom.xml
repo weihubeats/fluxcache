@@ -12,6 +12,9 @@
     <artifactId>fluxcache-all-spring-boot-starter</artifactId>
     <properties>
         <jacoco.skip>true</jacoco.skip>
+        <!-- pure aggregation starter, no sources/tests of its own -->
+        <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
+        <surefire.failIfNoTests>false</surefire.failIfNoTests>
     </properties>
     <name>fluxcache-all-spring-boot-starter</name>
     <description>FluxCache all-in-one Spring Boot starter</description>

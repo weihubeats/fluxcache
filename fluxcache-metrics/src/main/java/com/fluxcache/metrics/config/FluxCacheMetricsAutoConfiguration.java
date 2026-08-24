@@ -24,7 +24,12 @@ import org.springframework.core.annotation.Order;
  * @author : wh
  */
 @Configuration(proxyBeanMethods = false)
-@AutoConfigureAfter(name = "org.springframework.boot.actuate.autoconfigure.metrics.registry.MeterRegistryAutoConfiguration")
+// real Boot autoconfiguration classes; the previous "metrics.registry.MeterRegistryAutoConfiguration"
+// name never existed, so ordering was silently unguaranteed and binding could run too early
+@AutoConfigureAfter(name = {
+        "org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration",
+        "org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration"
+})
 @ConditionalOnClass(MeterRegistry.class)
 @ConditionalOnBean(MeterRegistry.class)
 public class FluxCacheMetricsAutoConfiguration {

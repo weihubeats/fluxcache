@@ -246,6 +246,21 @@ public List<StudentVO> secondaryCacheByCaffeineRedis(String name) {
 
 引入 starter（含 admin）后访问管理端能力；前端见 `fluxcache-dashboard`
 
+### 安全配置
+
+Dashboard 包含清空/驱逐缓存等破坏性操作，生产环境务必配置鉴权：
+
+```yaml
+flux:
+  cache:
+    admin:
+      enabled: true        # 默认 true；置 false 完全关闭 Dashboard REST
+      token: your-secret   # 非空时所有请求需携带请求头 X-Flux-Cache-Token: your-secret
+    # prefix: /cache/manager/v1   # 自定义路径前缀
+```
+
+未配置 `token` 时启动会输出 WARN 日志提醒。也可在网关层做鉴权后将该前缀路由到内网。
+
 ## 可观测性（Micrometer / Prometheus / Grafana）
 
 企业级监控不依赖内置 Dashboard，支持通过 Micrometer 将缓存指标导出到 Prometheus + Grafana，与业务指标统一治理。

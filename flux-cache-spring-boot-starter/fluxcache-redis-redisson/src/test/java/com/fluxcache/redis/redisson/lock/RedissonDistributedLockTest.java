@@ -78,6 +78,16 @@ public class RedissonDistributedLockTest {
     }
 
     @Test
+    public void tryLock_zeroOrNegativeLease_clampedToOneSecond() throws Exception {
+        // 回归：leaseTime<=0 曾静默启用 Redisson watchdog，锁持有到进程退出
+        distributedLock.tryLock("k-zero", 5, 0);
+        verify(lock).tryLock(eq(5L), eq(1L), eq(TimeUnit.SECONDS));
+
+        distributedLock.tryLock("k-negative", 7, -10);
+        verify(lock).tryLock(eq(7L), eq(1L), eq(TimeUnit.SECONDS));
+    }
+
+    @Test
     public void unlock_releasesHeldLock() {
         try {
             when(lock.tryLock(eq(10L), eq(30L), eq(TimeUnit.SECONDS))).thenReturn(true);
