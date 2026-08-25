@@ -130,4 +130,37 @@ public class FluxMultiLevelCacheOrderTest {
         org.junit.Assert.assertNull(wrapper.get());
         verify(first).putDirectly(same("nk"), same(FluxNullValue.INSTANCE));
     }
+
+    @Test
+    public void getAll_emptyKeys_returnsEmptyWithoutTouchingLevels() {
+        Map<String, String> res = cache.getAll(java.util.Collections.emptyList(), String.class);
+
+        org.junit.Assert.assertTrue(res.isEmpty());
+        verify(first, never()).getValues(anyList());
+        verify(second, never()).getValues(anyList());
+    }
+
+    @Test
+    public void getAll_allKeysInL1_skipsL2() {
+        Map<String, String> l1 = new HashMap<>();
+        l1.put("a", "1");
+        when(first.getValues(anyList())).thenReturn(l1);
+
+        Map<String, String> res = cache.getAll(Arrays.asList("a"), String.class);
+
+        org.junit.Assert.assertEquals("1", res.get("a"));
+        verify(second, never()).getValues(anyList());
+        verify(first, never()).putAllDirectly(anyMap());
+    }
+
+    @Test
+    public void getAll_l2EmptyResult_noPromotion() {
+        when(first.getValues(anyList())).thenReturn(new HashMap<>());
+        when(second.getValues(anyList())).thenReturn(new HashMap<>());
+
+        Map<String, String> res = cache.getAll(Arrays.asList("missing"), String.class);
+
+        org.junit.Assert.assertTrue(res.isEmpty());
+        verify(first, never()).putAllDirectly(anyMap());
+    }
 }

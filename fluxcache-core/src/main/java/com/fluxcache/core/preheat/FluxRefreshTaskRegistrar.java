@@ -16,9 +16,7 @@ import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
-import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
@@ -221,18 +219,6 @@ public class FluxRefreshTaskRegistrar implements ApplicationListener<ContextRefr
         // target class, not proxy class: JDK proxy names are JVM-order dependent and would
         // break cross-node mutual exclusion
         return prefix + AopUtils.getTargetClass(bean).getName() + ":" + method.getName() + ":" + cacheName;
-    }
-
-    private void invokeMethodForKey(Object beanProxy, Method method, Object key)
-            throws InvocationTargetException, IllegalAccessException {
-        ReflectionUtils.makeAccessible(method);
-        if (method.getParameterCount() == 0) {
-            method.invoke(beanProxy);
-        } else if (method.getParameterCount() == 1) {
-            method.invoke(beanProxy, key);
-        } else {
-            log.warn("[FluxCache] 暂不支持多参数刷新 method={} 参数个数={}", method.getName(), method.getParameterCount());
-        }
     }
 
     private boolean shouldSkipClass(Class<?> clazz) {

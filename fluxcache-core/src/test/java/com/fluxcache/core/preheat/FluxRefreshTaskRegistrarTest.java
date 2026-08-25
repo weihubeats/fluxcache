@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -115,6 +116,32 @@ public class FluxRefreshTaskRegistrarTest {
         registrar.onApplicationEvent(event);
 
         verify(scheduler, never()).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
+    public void repeatedRootEvents_registerOnlyOnce() {
+        registerBeans(new RefreshService());
+
+        registrar.onApplicationEvent(event);
+        int afterFirst = org.mockito.Mockito.mockingDetails(scheduler).getInvocations().size();
+
+        // 第二次 ContextRefreshedEvent（父子容器/devtools）不得重复注册任务
+        registrar.onApplicationEvent(event);
+        int afterSecond = org.mockito.Mockito.mockingDetails(scheduler).getInvocations().size();
+
+        org.junit.Assert.assertEquals(afterFirst, afterSecond);
+    }
+
+    @Test
+    public void shouldSkipClass_frameworkAndNullPackages() throws Exception {
+        java.lang.reflect.Method m = FluxRefreshTaskRegistrar.class
+                .getDeclaredMethod("shouldSkipClass", Class.class);
+        m.setAccessible(true);
+
+        assertTrue((boolean) m.invoke(registrar, String.class));                       // java.
+        assertTrue((boolean) m.invoke(registrar,
+                org.springframework.context.ApplicationContext.class));                // spring
+        assertFalse((boolean) m.invoke(registrar, getClass()));
     }
 
     @Test

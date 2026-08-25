@@ -119,6 +119,32 @@ public class FluxCacheWarmUpRunnerTest {
     }
 
     @Test
+    public void primitiveParamTypes_invoked() throws Exception {
+        properties.setWarmUpEnable(true);
+        PrimitiveParamsService service = new PrimitiveParamsService();
+        FluxCacheWarmUpRunner runner = runner(Map.of("prims", service));
+
+        runner.onApplicationReady(event);
+
+        await(service.calls, 1);
+    }
+
+    @Test
+    public void beanMapWithNullOrUnrelatedEntries_skippedGracefully() throws Exception {
+        properties.setWarmUpEnable(true);
+        WrapperParamsService service = new WrapperParamsService();
+        Map<String, Object> beans = new HashMap<>();
+        beans.put("null-entry", null);
+        beans.put("plain", new Object());
+        beans.put("wrappers", service);
+        FluxCacheWarmUpRunner runner = runner(beans);
+
+        runner.onApplicationReady(event);
+
+        await(service.calls, 1);
+    }
+
+    @Test
     public void nullBeanMap_noOp() {
         properties.setWarmUpEnable(true);
         FluxCacheWarmUpRunner runner = runner(null);
@@ -190,6 +216,17 @@ public class FluxCacheWarmUpRunnerTest {
 
         @FluxCacheable(cacheName = "wrappers-1")
         public String load(Long a, Integer b, Boolean c, Double d, Float e) {
+            calls.incrementAndGet();
+            return "v";
+        }
+    }
+
+    public static class PrimitiveParamsService {
+
+        final AtomicInteger calls = new AtomicInteger();
+
+        @FluxCacheable(cacheName = "prims-1")
+        public String load(long a, int b, boolean c, double d, float e) {
             calls.incrementAndGet();
             return "v";
         }

@@ -138,6 +138,22 @@ public class DefaultFluxCacheManagerTest {
     }
 
     @Test
+    public void evictAndClear_unknownCache_returnFalse() {
+        assertFalse(manager.evictCache("missing-cache", java.util.Arrays.asList("a")));
+        assertFalse(manager.clearCacheByName("missing-cache"));
+    }
+
+    @Test
+    public void publish_monitorThrows_swallowedNotPropagated() {
+        manager.createCache(operation(CACHE));
+        org.mockito.Mockito.doThrow(new IllegalStateException("monitor-down"))
+                .when(monitor).publishMonitorEvent(any());
+
+        // 监控故障不得影响业务读写
+        assertEquals("v", manager.getCacheOrPut(CACHE, "k-mon", () -> "v"));
+    }
+
+    @Test
     public void getCacheOrPut_cacheGetThrows_continuesToLoad() {
         manager.createCache(operation(CACHE));
         when(cache.get(any())).thenThrow(new IllegalStateException("redis-down"));
