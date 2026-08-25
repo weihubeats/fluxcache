@@ -107,7 +107,6 @@ public class FluxCacheAnnotationInterceptor implements MethodInterceptor {
         boolean force = FluxForceRefreshContext.isForceRefresh();
 
         FluxCache cache = cacheManager.getCache(op.getCacheName());
-
         if (Objects.isNull(cache)) {
             return invoker.invoke();
         }

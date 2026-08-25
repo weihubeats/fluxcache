@@ -48,8 +48,11 @@ import java.util.Map;
 @Import({FluxCacheProperties.class, FluxCacheCreatorAutoConfiguration.class})
 public class FluxProxyCacheAutoConfiguration {
 
+    // ROLE_INFRASTRUCTURE is REQUIRED: without aspectjweaver on the classpath Boot falls back to
+    // InfrastructureAdvisorAutoProxyCreator, which only applies advisors marked with this role.
     @Bean
     @Order(1)
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     public Advisor FluxCacheAnnotationAdvisor(FluxCacheProperties cacheProperties,
         FluxCacheOperationSource FluxCacheOperationSource,
         FluxCacheManager cacheManager, FluxCacheMonitor cacheMonitor) {
@@ -59,6 +62,7 @@ public class FluxProxyCacheAutoConfiguration {
 
     @Bean
     @Order(1)
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     public Advisor FluxCacheableAnnotationAdvisor(FluxCacheProperties cacheProperties,
         FluxCacheOperationSource FluxCacheOperationSource,
         FluxCacheManager cacheManager, FluxCacheMonitor cacheMonitor) {
@@ -68,6 +72,7 @@ public class FluxProxyCacheAutoConfiguration {
 
     @Bean
     @Order(1)
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     public Advisor FluxCacheEvictAnnotationAdvisor(FluxCacheProperties cacheProperties,
         FluxCacheOperationSource FluxCacheOperationSource,
         FluxCacheManager cacheManager, FluxCacheMonitor cacheMonitor) {
