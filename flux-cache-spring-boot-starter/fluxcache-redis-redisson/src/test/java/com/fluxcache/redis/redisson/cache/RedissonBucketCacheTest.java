@@ -99,7 +99,7 @@ public class RedissonBucketCacheTest {
         List<String> keys = List.of("user:1", "user:2");
         Map returned = new HashMap();
         returned.put(buildKey("user:1"), "Alice");
-        when(buckets.get(any())).thenReturn(returned);
+        when(buckets.get(any(String[].class))).thenReturn(returned);
 
         Map<String, String> result = cache.getValues(keys);
         assertEquals(1, result.size());
