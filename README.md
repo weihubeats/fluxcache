@@ -1,7 +1,7 @@
 # fluxcache
 
 [![CI](https://github.com/weihubeats/fluxcache/actions/workflows/ci.yml/badge.svg)](https://github.com/weihubeats/fluxcache/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/weihubeats/fluxcache/branch/main/graph/badge.svg)](https://codecov.io/gh/weihubeats/fluxcache)
+[![Coverage](https://codecov.io/gh/weihubeats/fluxcache/branch/spring-boot-3.x/graph/badge.svg)](https://codecov.io/gh/weihubeats/fluxcache)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.weihubeats/fluxcache-all-spring-boot-starter)](https://central.sonatype.com/artifact/io.github.weihubeats/fluxcache-all-spring-boot-starter)
 [![License](https://img.shields.io/github/license/weihubeats/fluxcache)](LICENSE)
 
@@ -68,7 +68,16 @@ fluxcache
 
 ## 使用
 
-目前仅支持 Spring Boot。可参考：
+目前支持 Spring Boot 2 与 3。版本对照：
+
+| Spring Boot | JDK | FluxCache 版本 | 分支 |
+| --- | --- | --- | --- |
+| Boot 2.7.x | 8 / 11 | `0.0.x`（最新 `0.0.4`） | `main` |
+| Boot 3.4.x | 17+ | `3.x`（最新 `3.0.1`） | `spring-boot-3.x`（默认分支） |
+
+> Boot 2 用户请切换到 `main` 分支使用 `0.0.x` 版本；Boot 3 用户直接使用当前默认分支的 `3.x` 版本。注意 `0.0.4` 与 `3.x` 是两条版本线，不可混用。
+
+可参考：
 
 - [fluxcache-example-starter](fluxcache-example/fluxcache-example-starter)（默认）
 - [fluxcache-example-redisson](fluxcache-example/fluxcache-example-redisson)
@@ -79,13 +88,11 @@ fluxcache
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-    <version>0.0.4</version>
+    <version>3.0.1</version>
 </dependency>
 ```
 
 默认包含 Spring Data Redis 实现与 admin。应用需提供 `RedisConnectionFactory`（Boot 自动配置或自行声明）。
-
-Spring Boot 3 请使用 `spring-boot-3.x` 分支上的 `3.0.0` 版本。
 
 ### 仅使用 Redisson（不引入 spring-data-redis）
 
@@ -93,12 +100,12 @@ Spring Boot 3 请使用 `spring-boot-3.x` 分支上的 `3.0.0` 版本。
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-redis-redisson</artifactId>
-    <version>0.0.4</version>
+    <version>3.0.1</version>
 </dependency>
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-admin</artifactId>
-    <version>0.0.4</version>
+    <version>3.0.1</version>
 </dependency>
 ```
 
@@ -273,12 +280,12 @@ flux:
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-    <version>0.0.4</version>
+    <version>3.0.1</version>
 </dependency>
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-metrics</artifactId>
-    <version>0.0.4</version>
+    <version>3.0.1</version>
 </dependency>
 ```
 

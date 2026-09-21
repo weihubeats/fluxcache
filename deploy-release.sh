@@ -124,10 +124,10 @@ echo ">>> GPG 密钥: ${GPG_KEY}"
 # 5. 检查分支（正式版）
 if [ "$SNAPSHOT" = false ] && [ "$FORCE" = false ]; then
     CURRENT_BRANCH=$(git branch --show-current)
-    if [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "master" ]; then
+    if [ "$CURRENT_BRANCH" != "main" ] && [ "$CURRENT_BRANCH" != "master" ] && [ "$CURRENT_BRANCH" != "spring-boot-3.x" ]; then
         echo ""
-        echo "❌ 当前分支: ${CURRENT_BRANCH}，不是 main/master"
-        echo "   正式版只能在 main 或 master 分支发布"
+        echo "❌ 当前分支: ${CURRENT_BRANCH}，不是 main/master/spring-boot-3.x"
+        echo "   正式版只能在 main、master 或 spring-boot-3.x 分支发布"
         echo "   如需强制发布，运行: $0 -f"
         exit 1
     fi

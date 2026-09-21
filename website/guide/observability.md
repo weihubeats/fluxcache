@@ -10,12 +10,12 @@
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-all-spring-boot-starter</artifactId>
-    <version>0.0.4</version>
+    <version>3.0.1</version>
 </dependency>
 <dependency>
     <groupId>io.github.weihubeats</groupId>
     <artifactId>fluxcache-metrics</artifactId>
-    <version>0.0.4</version>
+    <version>3.0.1</version>
 </dependency>
 ```
 
