@@ -20,6 +20,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
@@ -38,6 +39,7 @@ import static org.awaitility.Awaitility.await;
  */
 @SpringBootTest(classes = FluxCacheApplication.class)
 @Testcontainers
+@EnabledIfDockerAvailable
 class FluxCacheBehaviorTest {
 
     @Container
